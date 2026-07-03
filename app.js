@@ -86,7 +86,6 @@ const refs = {
   tripType: document.getElementById("tripType"),
   onewayFields: document.getElementById("onewayFields"),
   returnFields: document.getElementById("returnFields"),
-  downloadCsv: document.getElementById("downloadCsv"),
 };
 
 let legSeqCounter = 0;
@@ -105,7 +104,6 @@ function wireEvents() {
   refs.addLegForm.addEventListener("submit", handleAddLegSubmit);
   refs.addLegForm.addEventListener("input", handlePointsPreviewInput);
   refs.tripType.addEventListener("change", updateTripTypeVisibility);
-  refs.downloadCsv.addEventListener("click", exportCsv);
   refs.clearSelection.addEventListener("click", () => selectTrip(null));
   refs.tripGrid.addEventListener("mouseover", handleTripCardHover);
   refs.tripGrid.addEventListener("mouseout", handleTripCardHover);
@@ -523,81 +521,6 @@ function showAddLegFeedback(message, isError) {
   refs.addLegStatus.classList.toggle("is-error", isError);
   refs.addLegStatus.classList.toggle("is-success", !isError);
   refs.addLegStatus.hidden = false;
-}
-
-// Serialises the current in-memory legs (bundled CSV plus anything added
-// through the form) back into the same CSV schema, so changes made in the
-// browser can be saved back to disk and picked up next time.
-function buildCsvText() {
-  const header = [
-    "id",
-    "direction",
-    "leg_order",
-    "splittable",
-    "origin",
-    "destination",
-    "departure_date",
-    "departure_time",
-    "arrival_date",
-    "arrival_time",
-    "cabin",
-    "airline",
-    "points",
-    "taxes_aud",
-    "ticket_aud",
-    "notes",
-  ];
-
-  const lines = [header.join(",")];
-  for (const leg of APP.travelLegs) {
-    lines.push(
-      [
-        leg.id,
-        leg.direction,
-        leg.legOrder,
-        leg.splittable ? "TRUE" : "FALSE",
-        leg.origin,
-        leg.destination,
-        leg.departureDateText,
-        leg.departureTimeText,
-        leg.arrivalDateText,
-        leg.arrivalTimeText,
-        leg.flightClass,
-        leg.airline,
-        leg.points,
-        leg.taxesAud,
-        leg.ticketAud,
-        leg.notes,
-      ]
-        .map(csvField)
-        .join(",")
-    );
-  }
-  return lines.join("\n");
-}
-
-function csvField(value) {
-  const text = String(value == null ? "" : value);
-  if (/[",\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-}
-
-function exportCsv() {
-  downloadTextFile(buildCsvText(), "flights.csv");
-}
-
-function downloadTextFile(text, filename) {
-  const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 function parseCsv(text) {
