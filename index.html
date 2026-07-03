@@ -34,7 +34,6 @@
 
     <main id="mainLayout" hidden>
       <div class="toolbar">
-        <button type="button" id="filterToggle" class="filter-toggle-btn" aria-expanded="false" aria-controls="toolbarFilters">Filter</button>
         <div class="toolbar-filters" id="toolbarFilters">
           <label>
             <span>Destination</span>
@@ -66,8 +65,25 @@
         </div>
       </div>
 
-      <details class="add-leg-panel">
-        <summary><span class="add-leg-summary-text">Add a flight option</span></summary>
+      <div class="panel-actions">
+        <button type="button" id="filterToggle" class="action-btn filter-toggle-btn" aria-expanded="false" aria-controls="toolbarFilters">
+          <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+          </svg>
+          <span>Filter</span>
+        </button>
+        <button type="button" id="addLegToggle" class="action-btn add-leg-toggle" aria-expanded="false" aria-controls="addLegBody">
+          <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <span class="add-leg-text-full">Add a flight option</span>
+          <span class="add-leg-text-short">Add</span>
+        </button>
+      </div>
+
+      <div class="add-leg-panel">
+        <div id="addLegBody" class="add-leg-body" hidden>
         <p class="add-leg-hint">
           Add a one-way option (a single leg) or a full return trip (an
           outbound and a return leg together). Durations, layovers, points
@@ -370,7 +386,8 @@
           </div>
         </form>
         <p id="addLegStatus" class="add-leg-status" hidden></p>
-      </details>
+        </div>
+      </div>
 
       <div class="view-toggle" id="viewToggle">
         <button type="button" class="view-toggle-btn is-active" data-view="chart">Chart</button>

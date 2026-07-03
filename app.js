@@ -81,6 +81,8 @@ const refs = {
   chartEmpty: document.getElementById("chartEmpty"),
   addLegForm: document.getElementById("addLegForm"),
   addLegStatus: document.getElementById("addLegStatus"),
+  addLegToggle: document.getElementById("addLegToggle"),
+  addLegBody: document.getElementById("addLegBody"),
   tripType: document.getElementById("tripType"),
   onewayFields: document.getElementById("onewayFields"),
   returnFields: document.getElementById("returnFields"),
@@ -109,6 +111,7 @@ function wireEvents() {
   refs.tripGrid.addEventListener("mouseout", handleTripCardHover);
   refs.viewToggle.addEventListener("click", handleViewToggleClick);
   refs.filterToggle.addEventListener("click", handleFilterToggleClick);
+  refs.addLegToggle.addEventListener("click", handleAddLegToggleClick);
   updateTripTypeVisibility();
 }
 
@@ -119,6 +122,17 @@ function wireEvents() {
 function handleFilterToggleClick() {
   const isExpanded = refs.toolbarFilters.classList.toggle("is-expanded");
   refs.filterToggle.setAttribute("aria-expanded", String(isExpanded));
+}
+
+// "Add a flight option" used to be a native <details>/<summary>; it's now a
+// plain button + hidden div so the toggle can sit side by side with the
+// Filter button in the same row on mobile (see .panel-actions in
+// styles.css). This handler drives the open/closed state on both desktop
+// and mobile.
+function handleAddLegToggleClick() {
+  const isOpen = !refs.addLegBody.hidden;
+  refs.addLegBody.hidden = isOpen;
+  refs.addLegToggle.setAttribute("aria-expanded", String(!isOpen));
 }
 
 // On narrow viewports, the trip list and chart are shown one at a time via
