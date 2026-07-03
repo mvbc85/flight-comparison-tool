@@ -22,8 +22,8 @@
 // 6. Copy the deployment's Web app URL into CONFIG.appsScriptUrl in app.js.
 
 const ALLOWED_EMAILS = [
-  "you@example.com",
-  "your-wife@example.com",
+  "mvbc85@gmail.com",
+  "isabel.azzalin@gmail.com",
 ];
 
 const SHEET_NAME = "flights";
