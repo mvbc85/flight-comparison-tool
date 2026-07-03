@@ -1399,6 +1399,7 @@ function legListHtml(legs) {
         <span class="leg-route">${leg.origin} &rarr; ${leg.destination}</span>
         <div class="leg-meta">
           <span class="cabin-tag ${cabinClassName(leg.flightClass)}">${leg.flightClass}</span>
+          <span class="payment-tag ${leg.points > 0 ? "payment-points" : "payment-cash"}">${leg.points > 0 ? "Points" : "Cash"}</span>
           <span>${leg.airline}</span>
           <span>&middot;</span>
           <span>${leg.departureDisplay}</span>
