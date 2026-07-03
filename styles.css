@@ -175,6 +175,10 @@ main {
   gap: 1.1rem;
 }
 
+.filter-toggle-btn {
+  display: none;
+}
+
 label {
   display: grid;
   gap: 0.3rem;
@@ -230,6 +234,35 @@ select:focus {
 
 .clear-selection:hover {
   background: var(--accent);
+  color: var(--bg);
+}
+
+/* ---------- Mobile chart/list view toggle (hidden above the 760px breakpoint) ---------- */
+
+.view-toggle {
+  display: none;
+  gap: 0.5rem;
+  margin: 0 0 1.1rem;
+}
+
+.view-toggle-btn {
+  flex: 1;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-raised);
+  color: var(--text-soft);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.view-toggle-btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
   color: var(--bg);
 }
 
@@ -817,6 +850,73 @@ select:focus {
 
   .chart-panel {
     position: static;
+  }
+
+  .view-toggle {
+    display: flex;
+  }
+
+  .results-layout[data-active-view="chart"] .trip-grid {
+    display: none;
+  }
+
+  .results-layout[data-active-view="list"] .chart-panel {
+    display: none;
+  }
+
+  .filter-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg-raised);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .toolbar-filters {
+    display: none;
+    width: 100%;
+    order: 3;
+    padding-top: 0.8rem;
+    margin-top: 0.6rem;
+    border-top: 1px dashed var(--line);
+  }
+
+  .toolbar-filters.is-expanded {
+    display: flex;
+  }
+
+  .add-leg-panel summary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg);
+  }
+
+  .add-leg-panel summary::before {
+    content: "+";
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+
+  .add-leg-panel[open] summary::before {
+    content: "\2212";
+  }
+
+  .add-leg-summary-text {
+    display: none;
   }
 }
 

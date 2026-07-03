@@ -70,8 +70,12 @@ const refs = {
   filterDestination: document.getElementById("filterDestination"),
   filterCabin: document.getElementById("filterCabin"),
   sortBy: document.getElementById("sortBy"),
+  filterToggle: document.getElementById("filterToggle"),
+  toolbarFilters: document.getElementById("toolbarFilters"),
   resultCount: document.getElementById("resultCount"),
   clearSelection: document.getElementById("clearSelection"),
+  viewToggle: document.getElementById("viewToggle"),
+  resultsLayout: document.getElementById("resultsLayout"),
   tripGrid: document.getElementById("tripGrid"),
   scatterChart: document.getElementById("scatterChart"),
   chartEmpty: document.getElementById("chartEmpty"),
@@ -103,7 +107,38 @@ function wireEvents() {
   refs.clearSelection.addEventListener("click", () => selectTrip(null));
   refs.tripGrid.addEventListener("mouseover", handleTripCardHover);
   refs.tripGrid.addEventListener("mouseout", handleTripCardHover);
+  refs.viewToggle.addEventListener("click", handleViewToggleClick);
+  refs.filterToggle.addEventListener("click", handleFilterToggleClick);
   updateTripTypeVisibility();
+}
+
+// Mobile-only: the Destination/Cabin/Sort by row is collapsed behind a
+// "Filter" button (see .filter-toggle-btn / .toolbar-filters in
+// styles.css); above the 760px breakpoint the filters are always visible
+// and this button is hidden, so this handler simply has no visible effect.
+function handleFilterToggleClick() {
+  const isExpanded = refs.toolbarFilters.classList.toggle("is-expanded");
+  refs.filterToggle.setAttribute("aria-expanded", String(isExpanded));
+}
+
+// On narrow viewports, the trip list and chart are shown one at a time via
+// the Chart/List toggle (see .view-toggle in styles.css); above the 760px
+// breakpoint both stay visible side by side and this toggle has no effect.
+function handleViewToggleClick(event) {
+  const button = event.target.closest(".view-toggle-btn");
+  if (!button) return;
+  setMobileView(button.dataset.view);
+}
+
+function setMobileView(view) {
+  refs.resultsLayout.dataset.activeView = view;
+  refs.viewToggle.querySelectorAll(".view-toggle-btn").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.view === view);
+  });
+}
+
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 760px)").matches;
 }
 
 // Google's gsi/client script loads asynchronously, so this polls briefly
@@ -1107,10 +1142,16 @@ function renderTrips() {
 
 // Selecting a dot on the scatter chart narrows the list on the left down to
 // that single trip; clicking the same dot again (or the "show all" button)
-// clears the selection and restores the full filtered list.
+// clears the selection and restores the full filtered list. On mobile,
+// where only one of chart/list is visible at a time, newly selecting a trip
+// also switches the view to the list so the isolated card is visible.
 function selectTrip(tripId) {
-  APP.selectedTripId = APP.selectedTripId === tripId ? null : tripId;
+  const wasSelected = APP.selectedTripId === tripId;
+  APP.selectedTripId = wasSelected ? null : tripId;
   renderTrips();
+  if (!wasSelected && APP.selectedTripId && isMobileViewport()) {
+    setMobileView("list");
+  }
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";

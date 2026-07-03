@@ -34,7 +34,8 @@
 
     <main id="mainLayout" hidden>
       <div class="toolbar">
-        <div class="toolbar-filters">
+        <button type="button" id="filterToggle" class="filter-toggle-btn" aria-expanded="false" aria-controls="toolbarFilters">Filter</button>
+        <div class="toolbar-filters" id="toolbarFilters">
           <label>
             <span>Destination</span>
             <select id="filterDestination">
@@ -66,7 +67,7 @@
       </div>
 
       <details class="add-leg-panel">
-        <summary>Add a flight option</summary>
+        <summary><span class="add-leg-summary-text">Add a flight option</span></summary>
         <p class="add-leg-hint">
           Add a one-way option (a single leg) or a full return trip (an
           outbound and a return leg together). Durations, layovers, points
@@ -371,7 +372,12 @@
         <p id="addLegStatus" class="add-leg-status" hidden></p>
       </details>
 
-      <div class="results-layout">
+      <div class="view-toggle" id="viewToggle">
+        <button type="button" class="view-toggle-btn is-active" data-view="chart">Chart</button>
+        <button type="button" class="view-toggle-btn" data-view="list">List</button>
+      </div>
+
+      <div class="results-layout" id="resultsLayout" data-active-view="chart">
         <div id="tripGrid" class="trip-grid"></div>
 
         <aside class="chart-panel">
