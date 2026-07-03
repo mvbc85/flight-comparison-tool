@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perth &rarr; Europe &middot; Route Finder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <header class="hero">
+      <p class="eyebrow">Every valid combination &middot; September &ndash; October 2026</p>
+      <h1>Perth to Madrid or Barcelona</h1>
+      <p class="lede">
+        Outbound and return legs stitched together automatically. Sort and
+        filter to find the trip that suits you.
+      </p>
+    </header>
+
+    <div id="loadError" class="load-error" hidden></div>
+
+    <div id="signInGate" class="sign-in-gate">
+      <p class="sign-in-copy">Sign in with Google to view and add flights.</p>
+      <div id="googleSignInButton"></div>
+      <p id="signInError" class="sign-in-error" hidden></p>
+    </div>
+    <p id="signedInAs" class="signed-in-as" hidden></p>
+
+    <main id="mainLayout" hidden>
+      <div class="toolbar">
+        <div class="toolbar-filters">
+          <label>
+            <span>Destination</span>
+            <select id="filterDestination">
+              <option value="all">Madrid &amp; Barcelona</option>
+              <option value="Madrid">Madrid only</option>
+              <option value="Barcelona">Barcelona only</option>
+            </select>
+          </label>
+          <label>
+            <span>Cabin</span>
+            <select id="filterCabin">
+              <option value="all">Any cabin</option>
+            </select>
+          </label>
+          <label>
+            <span>Sort by</span>
+            <select id="sortBy">
+              <option value="duration">Shortest duration</option>
+              <option value="total">Lowest total cost</option>
+              <option value="cash">Lowest cash cost</option>
+              <option value="cabin">Best cabin first</option>
+            </select>
+          </label>
+        </div>
+        <div class="result-count-group">
+          <div class="result-count" id="resultCount"></div>
+          <button type="button" id="clearSelection" class="clear-selection" hidden>Show all routes</button>
+        </div>
+      </div>
+
+      <details class="add-leg-panel">
+        <summary>Add a flight option</summary>
+        <p class="add-leg-hint">
+          Add a one-way option (a single leg) or a full return trip (an
+          outbound and a return leg together). Durations, layovers, points
+          value and whether the option can be mixed with others are all
+          calculated automatically.
+        </p>
+        <form id="addLegForm" class="add-leg-form">
+          <label class="trip-type-field">
+            <span>Trip type</span>
+            <select name="tripType" id="tripType">
+              <option value="oneway">One way (single leg)</option>
+              <option value="return">Return (round trip)</option>
+            </select>
+          </label>
+
+          <div id="onewayFields" class="leg-fieldset">
+            <div class="field-row">
+              <label>
+                <span>Direction</span>
+                <select name="ow_direction">
+                  <option value="outbound">Outbound &mdash; Perth to Europe</option>
+                  <option value="return">Return &mdash; Europe to Perth</option>
+                </select>
+              </label>
+              <label>
+                <span>Origin</span>
+                <select name="ow_origin" required data-required-when-visible>
+                  <option value=""></option>
+                  <option value="Perth">Perth</option>
+                  <option value="Adelaide">Adelaide</option>
+                  <option value="Rome">Rome</option>
+                  <option value="Madrid">Madrid</option>
+                  <option value="Barcelona">Barcelona</option>
+                  <option value="Amsterdam">Amsterdam</option>
+                  <option value="Brisbane">Brisbane</option>
+                </select>
+              </label>
+              <label>
+                <span>Destination</span>
+                <select name="ow_destination" required data-required-when-visible>
+                  <option value=""></option>
+                  <option value="Perth">Perth</option>
+                  <option value="Adelaide">Adelaide</option>
+                  <option value="Rome">Rome</option>
+                  <option value="Madrid">Madrid</option>
+                  <option value="Barcelona">Barcelona</option>
+                  <option value="Amsterdam">Amsterdam</option>
+                  <option value="Brisbane">Brisbane</option>
+                </select>
+              </label>
+            </div>
+            <div class="field-row">
+              <label>
+                <span>Departure date</span>
+                <input type="date" name="ow_departure_date" required data-required-when-visible />
+              </label>
+              <label>
+                <span>Departure time</span>
+                <input type="time" name="ow_departure_time" required data-required-when-visible />
+              </label>
+            </div>
+            <div class="field-row">
+              <label>
+                <span>Arrival date</span>
+                <input type="date" name="ow_arrival_date" required data-required-when-visible />
+              </label>
+              <label>
+                <span>Arrival time</span>
+                <input type="time" name="ow_arrival_time" required data-required-when-visible />
+              </label>
+            </div>
+            <div class="field-row">
+              <label>
+                <span>Cabin</span>
+                <select name="ow_cabin">
+                  <option value="Economy">Economy</option>
+                  <option value="Premium Economy">Premium Economy</option>
+                  <option value="Business">Business</option>
+                  <option value="First">First</option>
+                </select>
+              </label>
+              <label>
+                <span>Airline</span>
+                <input type="text" name="ow_airline" />
+              </label>
+            </div>
+            <div class="field-row">
+              <label>
+                <span>Points</span>
+                <input type="number" name="ow_points" min="0" value="0" data-preview="owPointsValue" />
+              </label>
+              <label>
+                <span>Points value (calculated)</span>
+                <output id="owPointsValue">$0</output>
+              </label>
+              <label>
+                <span>Taxes (AUD)</span>
+                <input type="number" name="ow_taxes_aud" min="0" step="0.01" value="0" />
+              </label>
+              <label>
+                <span>Ticket price (AUD)</span>
+                <input type="number" name="ow_ticket_aud" min="0" step="0.01" value="0" />
+              </label>
+            </div>
+            <label class="notes-field">
+              <span>Notes</span>
+              <input type="text" name="ow_notes" />
+            </label>
+          </div>
+
+          <div id="returnFields" class="leg-fieldset" hidden>
+            <p class="add-leg-hint">
+              A round trip flying Perth &rarr; Madrid/Barcelona &rarr; Perth
+              through the same city both ways is automatically marked as a
+              fixed package that can't be mixed with other options. Anything
+              else stays mixable.
+            </p>
+            <fieldset class="leg-fieldset-group">
+              <legend>Outbound leg &mdash; Perth to Europe</legend>
+              <div class="field-row">
+                <label>
+                  <span>Origin</span>
+                  <select name="out_origin" required data-required-when-visible>
+                    <option value=""></option>
+                    <option value="Perth">Perth</option>
+                    <option value="Adelaide">Adelaide</option>
+                    <option value="Rome">Rome</option>
+                    <option value="Madrid">Madrid</option>
+                    <option value="Barcelona">Barcelona</option>
+                    <option value="Amsterdam">Amsterdam</option>
+                    <option value="Brisbane">Brisbane</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Destination</span>
+                  <select name="out_destination" required data-required-when-visible>
+                    <option value=""></option>
+                    <option value="Perth">Perth</option>
+                    <option value="Adelaide">Adelaide</option>
+                    <option value="Rome">Rome</option>
+                    <option value="Madrid">Madrid</option>
+                    <option value="Barcelona">Barcelona</option>
+                    <option value="Amsterdam">Amsterdam</option>
+                    <option value="Brisbane">Brisbane</option>
+                  </select>
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Departure date</span>
+                  <input type="date" name="out_departure_date" required data-required-when-visible />
+                </label>
+                <label>
+                  <span>Departure time</span>
+                  <input type="time" name="out_departure_time" required data-required-when-visible />
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Arrival date</span>
+                  <input type="date" name="out_arrival_date" required data-required-when-visible />
+                </label>
+                <label>
+                  <span>Arrival time</span>
+                  <input type="time" name="out_arrival_time" required data-required-when-visible />
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Cabin</span>
+                  <select name="out_cabin">
+                    <option value="Economy">Economy</option>
+                    <option value="Premium Economy">Premium Economy</option>
+                    <option value="Business">Business</option>
+                    <option value="First">First</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Airline</span>
+                  <input type="text" name="out_airline" />
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Points</span>
+                  <input type="number" name="out_points" min="0" value="0" data-preview="outPointsValue" />
+                </label>
+                <label>
+                  <span>Points value (calculated)</span>
+                  <output id="outPointsValue">$0</output>
+                </label>
+                <label>
+                  <span>Taxes (AUD)</span>
+                  <input type="number" name="out_taxes_aud" min="0" step="0.01" value="0" />
+                </label>
+                <label>
+                  <span>Ticket price (AUD)</span>
+                  <input type="number" name="out_ticket_aud" min="0" step="0.01" value="0" />
+                </label>
+              </div>
+              <label class="notes-field">
+                <span>Notes</span>
+                <input type="text" name="out_notes" />
+              </label>
+            </fieldset>
+
+            <fieldset class="leg-fieldset-group">
+              <legend>Return leg &mdash; Europe to Perth</legend>
+              <div class="field-row">
+                <label>
+                  <span>Origin</span>
+                  <select name="ret_origin" required data-required-when-visible>
+                    <option value=""></option>
+                    <option value="Perth">Perth</option>
+                    <option value="Adelaide">Adelaide</option>
+                    <option value="Rome">Rome</option>
+                    <option value="Madrid">Madrid</option>
+                    <option value="Barcelona">Barcelona</option>
+                    <option value="Amsterdam">Amsterdam</option>
+                    <option value="Brisbane">Brisbane</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Destination</span>
+                  <select name="ret_destination" required data-required-when-visible>
+                    <option value=""></option>
+                    <option value="Perth">Perth</option>
+                    <option value="Adelaide">Adelaide</option>
+                    <option value="Rome">Rome</option>
+                    <option value="Madrid">Madrid</option>
+                    <option value="Barcelona">Barcelona</option>
+                    <option value="Amsterdam">Amsterdam</option>
+                    <option value="Brisbane">Brisbane</option>
+                  </select>
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Departure date</span>
+                  <input type="date" name="ret_departure_date" required data-required-when-visible />
+                </label>
+                <label>
+                  <span>Departure time</span>
+                  <input type="time" name="ret_departure_time" required data-required-when-visible />
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Arrival date</span>
+                  <input type="date" name="ret_arrival_date" required data-required-when-visible />
+                </label>
+                <label>
+                  <span>Arrival time</span>
+                  <input type="time" name="ret_arrival_time" required data-required-when-visible />
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Cabin</span>
+                  <select name="ret_cabin">
+                    <option value="Economy">Economy</option>
+                    <option value="Premium Economy">Premium Economy</option>
+                    <option value="Business">Business</option>
+                    <option value="First">First</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Airline</span>
+                  <input type="text" name="ret_airline" />
+                </label>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Points</span>
+                  <input type="number" name="ret_points" min="0" value="0" data-preview="retPointsValue" />
+                </label>
+                <label>
+                  <span>Points value (calculated)</span>
+                  <output id="retPointsValue">$0</output>
+                </label>
+                <label>
+                  <span>Taxes (AUD)</span>
+                  <input type="number" name="ret_taxes_aud" min="0" step="0.01" value="0" />
+                </label>
+                <label>
+                  <span>Ticket price (AUD)</span>
+                  <input type="number" name="ret_ticket_aud" min="0" step="0.01" value="0" />
+                </label>
+              </div>
+              <label class="notes-field">
+                <span>Notes</span>
+                <input type="text" name="ret_notes" />
+              </label>
+            </fieldset>
+          </div>
+
+          <div class="add-leg-actions">
+            <button type="submit">Add flight option</button>
+            <button type="button" id="downloadCsv" class="secondary">Download updated CSV</button>
+          </div>
+        </form>
+        <p id="addLegStatus" class="add-leg-status" hidden></p>
+      </details>
+
+      <div class="results-layout">
+        <div id="tripGrid" class="trip-grid"></div>
+
+        <aside class="chart-panel">
+          <h2 class="chart-title">Cost vs. travel time</h2>
+          <p class="chart-subtitle">
+            Size = cash cost &middot; left half = outbound cabin &middot; right half = return cabin
+            &middot; click a dot to isolate that trip in the list
+          </p>
+          <svg id="scatterChart" class="scatter-chart" role="img" aria-label="Scatter plot of total cost against total travel time for every route"></svg>
+          <p id="chartEmpty" class="chart-empty" hidden>No routes to plot yet.</p>
+          <div class="chart-legend">
+            <span class="legend-item"><i class="legend-dot cabin-economy"></i>Economy</span>
+            <span class="legend-item"><i class="legend-dot cabin-premium-economy"></i>Premium Economy</span>
+            <span class="legend-item"><i class="legend-dot cabin-business"></i>Business</span>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

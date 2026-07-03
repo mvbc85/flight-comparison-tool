@@ -1,0 +1,6 @@
+## Private travel data - not published to the public GitHub Pages repo.
+## Live data lives in the shared Google Sheet backend instead (see
+## apps-script/Code.gs / the setup guide). Keep local copies for your own
+## reference/backup, they just won't be committed.
+flights.csv
+Vuelos 2026 - Sheet2.csv
