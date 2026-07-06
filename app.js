@@ -22,6 +22,7 @@ let idToken = null;
 
 const EUROPE_CITIES = ["Madrid", "Barcelona"];
 const ORIGIN_CITY = "Perth";
+const MAX_LAYOVER_HOURS = 12;
 const CABIN_RANK = {
   Economy: 1,
   "Premium Economy": 2,
@@ -897,6 +898,10 @@ function dfsRoutes({
     }
 
     if (prev && option.departure < prev.arrival) {
+      continue;
+    }
+
+    if (prev && (option.departure - prev.arrival) / 36e5 > MAX_LAYOVER_HOURS) {
       continue;
     }
 
