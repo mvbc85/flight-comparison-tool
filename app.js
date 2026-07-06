@@ -20,6 +20,13 @@ const CONFIG = {
 // of you before reading/writing the shared Google Sheet.
 let idToken = null;
 
+// The ID token is cached in localStorage (this device only, never sent
+// anywhere but the Apps Script backend) so a page refresh doesn't force the
+// sign-in flow again until the cached token actually expires - Google ID
+// tokens are short-lived (about an hour), so this is re-checked on every
+// load and cleared automatically once it's stale or rejected by the backend.
+const ID_TOKEN_STORAGE_KEY = "vuelos2026.idToken";
+
 const EUROPE_CITIES = ["Madrid", "Barcelona"];
 const ORIGIN_CITY = "Perth";
 const MAX_LAYOVER_HOURS = 12;
@@ -96,7 +103,9 @@ function nextLegSeq() {
 }
 
 wireEvents();
-waitForGoogleIdentity();
+if (!tryRestoreSession()) {
+  waitForGoogleIdentity();
+}
 
 function wireEvents() {
   refs.filterDestination.addEventListener("change", renderTrips);
@@ -180,6 +189,7 @@ function initGoogleSignIn() {
   google.accounts.id.initialize({
     client_id: CONFIG.googleClientId,
     callback: handleCredentialResponse,
+    auto_select: true,
   });
   google.accounts.id.renderButton(refs.googleSignInButton, {
     theme: "outline",
@@ -189,12 +199,72 @@ function initGoogleSignIn() {
 }
 
 function handleCredentialResponse(response) {
-  idToken = response.credential;
+  applySignedInToken(response.credential);
+}
+
+// Shared by both the interactive sign-in callback and the on-load
+// localStorage restore path, so both end up in the exact same signed-in
+// state and both persist the (possibly refreshed) token for next time.
+function applySignedInToken(token) {
+  idToken = token;
   const claims = decodeJwtPayload(idToken);
+  persistIdToken(idToken, claims);
   refs.signInGate.hidden = true;
   refs.signedInAs.hidden = false;
   refs.signedInAs.textContent = claims && claims.email ? `Signed in as ${claims.email}` : "Signed in";
   loadFromSheet();
+}
+
+// Returns true if a still-valid cached token was found and applied (so
+// callers can skip the normal sign-in-gate flow entirely on this load).
+function tryRestoreSession() {
+  const cached = readCachedIdToken();
+  if (!cached) {
+    return false;
+  }
+  applySignedInToken(cached.token);
+  return true;
+}
+
+function persistIdToken(token, claims) {
+  if (!claims || !claims.exp) {
+    return;
+  }
+  try {
+    localStorage.setItem(ID_TOKEN_STORAGE_KEY, JSON.stringify({ token, exp: claims.exp }));
+  } catch (error) {
+    // Ignore storage failures (e.g. private browsing) - the user just falls
+    // back to signing in every time.
+  }
+}
+
+function readCachedIdToken() {
+  let raw;
+  try {
+    raw = localStorage.getItem(ID_TOKEN_STORAGE_KEY);
+  } catch (error) {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const isExpired = !parsed.exp || Date.now() >= parsed.exp * 1000;
+    if (isExpired) {
+      clearCachedIdToken();
+      return null;
+    }
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
+function clearCachedIdToken() {
+  try {
+    localStorage.removeItem(ID_TOKEN_STORAGE_KEY);
+  } catch (error) {
+    // Ignore.
+  }
 }
 
 function decodeJwtPayload(token) {
@@ -224,9 +294,27 @@ async function loadFromSheet() {
     }
     hydrateFromCsv(text);
   } catch (error) {
+    if (isAuthError(error)) {
+      // The cached token is stale/invalid - drop it and fall back to the
+      // normal sign-in gate instead of showing a confusing data-load error.
+      clearCachedIdToken();
+      idToken = null;
+      refs.signInGate.hidden = false;
+      refs.signedInAs.hidden = true;
+      waitForGoogleIdentity();
+      return;
+    }
     refs.loadError.hidden = false;
     refs.loadError.textContent = `Could not load flight data: ${error.message}`;
   }
+}
+
+// The Apps Script backend reports both an unrecognised/expired token and an
+// email outside ALLOWED_EMAILS the same way (see withAuth() in Code.gs),
+// starting with "Not authorised for " - used here to tell "please sign in
+// again" apart from an unrelated data-load failure.
+function isAuthError(error) {
+  return /^Not authorised for /.test(error.message || "");
 }
 
 // The backend always returns CSV text on success, and a small JSON object
