@@ -3,6 +3,7 @@ const APP = {
   warnings: [],
   trips: [],
   selectedTripId: null,
+  returnPeriod: "before",
 };
 
 // ====== ONE-TIME SETUP: fill these in after following the setup guide ======
@@ -30,6 +31,10 @@ const ID_TOKEN_STORAGE_KEY = "vuelos2026.idToken";
 const EUROPE_CITIES = ["Madrid", "Barcelona"];
 const ORIGIN_CITY = "Perth";
 const MAX_LAYOVER_HOURS = 12;
+// The two return-period views (see .period-toggle) split trips by the local
+// departure date of their first return leg - on or after this UTC-midnight
+// instant counts as "after", everything earlier counts as "before".
+const RETURN_PERIOD_SPLIT_MS = Date.UTC(2026, 9, 15);
 const CABIN_RANK = {
   Economy: 1,
   "Premium Economy": 2,
@@ -78,6 +83,7 @@ const refs = {
   filterDestination: document.getElementById("filterDestination"),
   filterCabin: document.getElementById("filterCabin"),
   sortBy: document.getElementById("sortBy"),
+  periodToggle: document.getElementById("periodToggle"),
   filterToggle: document.getElementById("filterToggle"),
   toolbarFilters: document.getElementById("toolbarFilters"),
   resultCount: document.getElementById("resultCount"),
@@ -120,7 +126,24 @@ function wireEvents() {
   refs.viewToggle.addEventListener("click", handleViewToggleClick);
   refs.filterToggle.addEventListener("click", handleFilterToggleClick);
   refs.addLegToggle.addEventListener("click", handleAddLegToggleClick);
+  refs.periodToggle.addEventListener("click", handlePeriodToggleClick);
   updateTripTypeVisibility();
+}
+
+// Switches between the "return before 15 Oct" and "return after 15 Oct"
+// views (see .period-toggle); affects both the trip list and the scatter
+// chart, since both are driven by the same filtered set in renderTrips().
+function handlePeriodToggleClick(event) {
+  const button = event.target.closest(".period-toggle-btn");
+  if (!button || button.dataset.period === APP.returnPeriod) {
+    return;
+  }
+  APP.returnPeriod = button.dataset.period;
+  refs.periodToggle.querySelectorAll(".period-toggle-btn").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.period === APP.returnPeriod);
+  });
+  APP.selectedTripId = null;
+  renderTrips();
 }
 
 // Mobile-only: the Destination/Cabin/Sort by row is collapsed behind a
@@ -1113,8 +1136,21 @@ function makeTrip(outbound, ret, isCurrentBooking) {
     cabinsUsed: [...new Set(outbound.cabinsUsed.concat(ret.cabinsUsed))],
     outboundCabin: outbound.bestCabin,
     returnCabin: ret.bestCabin,
+    returnPeriod: classifyReturnPeriod(ret.legs[0].departureDateText),
     isCurrentBooking,
   };
+}
+
+// Classifies a trip's return leg by whether its (first leg's) local
+// departure date falls before or on/after 15 October - drives the
+// .period-toggle view split (see RETURN_PERIOD_SPLIT_MS).
+function classifyReturnPeriod(departureDateText) {
+  const parts = parseDateParts(departureDateText);
+  if (!parts) {
+    return "before";
+  }
+  const ms = Date.UTC(parts.year, parts.month - 1, parts.day);
+  return ms >= RETURN_PERIOD_SPLIT_MS ? "after" : "before";
 }
 
 function bestCabinRank(trip) {
@@ -1126,7 +1162,9 @@ function renderTrips() {
   const cabinFilter = refs.filterCabin.value;
   const sortBy = refs.sortBy.value;
 
-  let trips = APP.trips.filter((trip) =>
+  let trips = APP.trips.filter((trip) => trip.returnPeriod === APP.returnPeriod);
+
+  trips = trips.filter((trip) =>
     destinationFilter === "all" ? true : trip.destination === destinationFilter
   );
 

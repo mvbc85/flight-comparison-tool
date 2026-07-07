@@ -227,6 +227,35 @@ select:focus {
   color: var(--bg);
 }
 
+/* ---------- Return-period toggle (before/after 15 Oct, visible on all sizes) ---------- */
+
+.period-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 1.1rem;
+}
+
+.period-toggle-btn {
+  flex: 1;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-raised);
+  color: var(--text-soft);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.period-toggle-btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
 /* ---------- Mobile chart/list view toggle (hidden above the 760px breakpoint) ---------- */
 
 .view-toggle {
