@@ -566,6 +566,10 @@ select:focus {
   transition: fill-opacity 150ms ease;
 }
 
+.scatter-dot .scatter-half-hatch {
+  pointer-events: none;
+}
+
 .scatter-dot .scatter-outline {
   fill: none;
   stroke: var(--bg);
@@ -652,6 +656,17 @@ select:focus {
 .legend-dot.cabin-first {
   color: var(--cabin-first);
   background: var(--cabin-first);
+}
+
+.legend-dot.legend-dot-points {
+  color: var(--text-soft);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--text-soft),
+    var(--text-soft) 2px,
+    transparent 2px,
+    transparent 4px
+  );
 }
 
 .trip-foot {

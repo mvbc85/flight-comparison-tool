@@ -1278,6 +1278,7 @@ function renderScatterChart(trips) {
   };
 
   const svg = refs.scatterChart;
+  svg.appendChild(scatterHatchDefs());
   svg.appendChild(
     chartGridAndAxes(xDomain, yDomain, xScale, yScale, plotLeft, plotTop, plotWidth, plotHeight)
   );
@@ -1357,11 +1358,40 @@ function svgText(x, y, text, className) {
   return el;
 }
 
+// Diagonal white hatch pattern layered on top of a half-dot's solid cabin
+// colour whenever that leg (or legs) were paid partly or fully with points -
+// a fully cash-paid half stays a plain solid fill. Defined once per chart
+// render (the SVG is fully cleared each time renderScatterChart runs).
+function scatterHatchDefs() {
+  const defs = document.createElementNS(SVG_NS, "defs");
+  const pattern = document.createElementNS(SVG_NS, "pattern");
+  pattern.setAttribute("id", "scatterPointsHatch");
+  pattern.setAttribute("width", "6");
+  pattern.setAttribute("height", "6");
+  pattern.setAttribute("patternUnits", "userSpaceOnUse");
+  pattern.setAttribute("patternTransform", "rotate(45)");
+
+  const stripe = document.createElementNS(SVG_NS, "line");
+  stripe.setAttribute("x1", "0");
+  stripe.setAttribute("y1", "0");
+  stripe.setAttribute("x2", "0");
+  stripe.setAttribute("y2", "6");
+  stripe.setAttribute("stroke", "#ffffff");
+  stripe.setAttribute("stroke-width", "3");
+  stripe.setAttribute("stroke-opacity", "0.6");
+
+  pattern.appendChild(stripe);
+  defs.appendChild(pattern);
+  return defs;
+}
+
 function scatterDot(trip, xScale, yScale, rScale) {
   const cx = xScale(trip.duration);
   const cy = yScale(trip.totalCost);
   const r = rScale(trip.cashCost);
   const isSelected = trip.tripId === APP.selectedTripId;
+  const outboundHasPoints = trip.outboundLegs.some((leg) => leg.points > 0);
+  const returnHasPoints = trip.returnLegs.some((leg) => leg.points > 0);
 
   const group = document.createElementNS(SVG_NS, "g");
   group.setAttribute(
@@ -1399,13 +1429,30 @@ function scatterDot(trip, xScale, yScale, rScale) {
     `Total cost: $${trip.totalCost.toFixed(0)}`,
     `Cash cost: $${trip.cashCost.toFixed(0)}`,
     `Total travel: ${trip.duration.toFixed(1)}h`,
-    `Outbound cabin: ${trip.outboundCabin}`,
-    `Return cabin: ${trip.returnCabin}`,
+    `Outbound cabin: ${trip.outboundCabin}${outboundHasPoints ? " (points)" : " (cash)"}`,
+    `Return cabin: ${trip.returnCabin}${returnHasPoints ? " (points)" : " (cash)"}`,
     "Click to isolate this trip in the list",
   ].join("\n");
 
   group.appendChild(outboundHalf);
   group.appendChild(returnHalf);
+
+  if (outboundHasPoints) {
+    const outboundHatch = document.createElementNS(SVG_NS, "path");
+    outboundHatch.setAttribute("d", halfCirclePath(cx, cy, r, "left"));
+    outboundHatch.setAttribute("fill", "url(#scatterPointsHatch)");
+    outboundHatch.setAttribute("class", "scatter-half-hatch");
+    group.appendChild(outboundHatch);
+  }
+
+  if (returnHasPoints) {
+    const returnHatch = document.createElementNS(SVG_NS, "path");
+    returnHatch.setAttribute("d", halfCirclePath(cx, cy, r, "right"));
+    returnHatch.setAttribute("fill", "url(#scatterPointsHatch)");
+    returnHatch.setAttribute("class", "scatter-half-hatch");
+    group.appendChild(returnHatch);
+  }
+
   group.appendChild(outline);
   group.appendChild(title);
 
