@@ -403,6 +403,16 @@
             Size = cash cost &middot; left half = outbound cabin &middot; right half = return cabin
             &middot; striped half = paid with points &middot; click a dot to isolate that trip in the list
           </p>
+          <div class="date-filter" id="dateFilterPanel">
+            <div class="date-filter-row">
+              <span class="date-filter-label">Depart</span>
+              <div class="date-filter-days" id="departureDateDays"></div>
+            </div>
+            <div class="date-filter-row">
+              <span class="date-filter-label">Return</span>
+              <div class="date-filter-days" id="returnDateDays"></div>
+            </div>
+          </div>
           <svg id="scatterChart" class="scatter-chart" role="img" aria-label="Scatter plot of total cost against total travel time for every route"></svg>
           <p id="chartEmpty" class="chart-empty" hidden>No routes to plot yet.</p>
           <div class="chart-legend">

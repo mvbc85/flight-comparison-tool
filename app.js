@@ -4,6 +4,8 @@ const APP = {
   trips: [],
   selectedTripId: null,
   returnPeriod: "before",
+  excludedDepartureDates: new Set(),
+  excludedReturnDates: new Set(),
 };
 
 // ====== ONE-TIME SETUP: fill these in after following the setup guide ======
@@ -35,6 +37,18 @@ const MAX_LAYOVER_HOURS = 12;
 // departure date of their first return leg - on or after this UTC-midnight
 // instant counts as "after", everything earlier counts as "before".
 const RETURN_PERIOD_SPLIT_MS = Date.UTC(2026, 9, 15);
+
+// Hardcoded preferred dates for the calendar date-filter strips above the
+// scatter chart (see .date-filter) - highlighted with a different colour
+// among whichever days actually have flights. The preferred return date
+// depends on which of Manuel's/Isabel's return views is active.
+const PREFERRED_DEPARTURE_DATE = { year: 2026, month: 9, day: 24 };
+const PREFERRED_RETURN_DATE_BY_PERIOD = {
+  before: { year: 2026, month: 10, day: 4 }, // Manuel's Return
+  after: { year: 2026, month: 10, day: 31 }, // Isabel's Return
+};
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 const CABIN_RANK = {
   Economy: 1,
   "Premium Economy": 2,
@@ -84,6 +98,8 @@ const refs = {
   filterCabin: document.getElementById("filterCabin"),
   sortBy: document.getElementById("sortBy"),
   periodToggle: document.getElementById("periodToggle"),
+  departureDateDays: document.getElementById("departureDateDays"),
+  returnDateDays: document.getElementById("returnDateDays"),
   filterToggle: document.getElementById("filterToggle"),
   toolbarFilters: document.getElementById("toolbarFilters"),
   resultCount: document.getElementById("resultCount"),
@@ -127,7 +143,27 @@ function wireEvents() {
   refs.filterToggle.addEventListener("click", handleFilterToggleClick);
   refs.addLegToggle.addEventListener("click", handleAddLegToggleClick);
   refs.periodToggle.addEventListener("click", handlePeriodToggleClick);
+  refs.departureDateDays.addEventListener("click", (event) => handleDateDayClick(event, APP.excludedDepartureDates));
+  refs.returnDateDays.addEventListener("click", (event) => handleDateDayClick(event, APP.excludedReturnDates));
   updateTripTypeVisibility();
+}
+
+// A date-filter day (see .date-filter) toggles that calendar day in/out of
+// the given exclusion set on every click - trips departing/returning on an
+// excluded day disappear from both the chart and the list until the day is
+// clicked again to re-include it.
+function handleDateDayClick(event, excludedSet) {
+  const button = event.target.closest(".date-day");
+  if (!button) {
+    return;
+  }
+  const key = button.dataset.dateKey;
+  if (excludedSet.has(key)) {
+    excludedSet.delete(key);
+  } else {
+    excludedSet.add(key);
+  }
+  renderTrips();
 }
 
 // Switches between the "return before 15 Oct" and "return after 15 Oct"
@@ -1137,6 +1173,8 @@ function makeTrip(outbound, ret, isCurrentBooking) {
     outboundCabin: outbound.bestCabin,
     returnCabin: ret.bestCabin,
     returnPeriod: classifyReturnPeriod(ret.legs[0].departureDateText),
+    departureDateKey: dateKeyFromText(outbound.legs[0].departureDateText),
+    returnDepartureDateKey: dateKeyFromText(ret.legs[0].departureDateText),
     isCurrentBooking,
   };
 }
@@ -1172,6 +1210,29 @@ function renderTrips() {
     cabinFilter === "all" ? true : trip.cabinsUsed.includes(cabinFilter)
   );
 
+  // The calendar day-filter strips (see .date-filter) always show every day
+  // in range with a dot on days that have flights - computed from the set
+  // above (destination/cabin/period filters applied, but before the date
+  // exclusions themselves), so a day doesn't vanish from the calendar just
+  // because it's currently toggled off.
+  renderDateFilterRow(
+    refs.departureDateDays,
+    trips,
+    (trip) => trip.departureDateKey,
+    PREFERRED_DEPARTURE_DATE,
+    APP.excludedDepartureDates
+  );
+  renderDateFilterRow(
+    refs.returnDateDays,
+    trips,
+    (trip) => trip.returnDepartureDateKey,
+    PREFERRED_RETURN_DATE_BY_PERIOD[APP.returnPeriod],
+    APP.excludedReturnDates
+  );
+
+  trips = trips.filter((trip) => !APP.excludedDepartureDates.has(trip.departureDateKey));
+  trips = trips.filter((trip) => !APP.excludedReturnDates.has(trip.returnDepartureDateKey));
+
   trips = trips.slice().sort((a, b) => {
     if (sortBy === "total") {
       return a.totalCost - b.totalCost || a.duration - b.duration;
@@ -1206,6 +1267,92 @@ function renderTrips() {
     : '<p class="empty-note">No routes match these filters.</p>';
 
   renderScatterChart(trips);
+}
+
+// Converts a DD/MM/YYYY (or ISO) date string into a plain "YYYY-MM-DD" key -
+// used both to group trips by calendar day and as the click target for the
+// date-filter day buttons (see .date-filter).
+function dateKeyFromText(text) {
+  const parts = parseDateParts(text);
+  return parts ? dateKeyFromParts(parts) : null;
+}
+
+function dateKeyFromParts(parts) {
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function msFromDateKey(key) {
+  const [year, month, day] = key.split("-").map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+// Every day from minMs to maxMs inclusive, one entry per calendar day - the
+// date-filter strips always show a contiguous run of days (even days with
+// no flights at all) rather than just the days that happen to have one.
+function enumerateDateRange(minMs, maxMs) {
+  const days = [];
+  for (let ms = minMs; ms <= maxMs; ms += 86400000) {
+    const d = new Date(ms);
+    days.push({
+      key: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`,
+      day: d.getUTCDate(),
+      monthLabel: MONTH_LABELS[d.getUTCMonth()],
+    });
+  }
+  return days;
+}
+
+// Renders one calendar day-filter row (departure or return). The day range
+// spans from the earliest to the latest date among `trips` (widened to
+// include the preferred date if it falls outside that range), every day in
+// that span is shown, days with at least one matching trip get a dot, the
+// preferred date is highlighted, and days in `excludedDates` are greyed out.
+function renderDateFilterRow(container, trips, dateKeyOf, preferredDateParts, excludedDates) {
+  if (!container) {
+    return;
+  }
+
+  const keysWithFlights = new Set();
+  let minMs = null;
+  let maxMs = null;
+  for (const trip of trips) {
+    const key = dateKeyOf(trip);
+    if (!key) continue;
+    keysWithFlights.add(key);
+    const ms = msFromDateKey(key);
+    if (minMs === null || ms < minMs) minMs = ms;
+    if (maxMs === null || ms > maxMs) maxMs = ms;
+  }
+
+  const preferredKey = dateKeyFromParts(preferredDateParts);
+  const preferredMs = msFromDateKey(preferredKey);
+  if (minMs === null || preferredMs < minMs) minMs = preferredMs;
+  if (maxMs === null || preferredMs > maxMs) maxMs = preferredMs;
+
+  const days = enumerateDateRange(minMs, maxMs);
+
+  container.innerHTML = days
+    .map((day) => {
+      const isPreferred = day.key === preferredKey;
+      const hasFlights = keysWithFlights.has(day.key);
+      const isExcluded = excludedDates.has(day.key);
+      const classes = ["date-day"];
+      if (isPreferred) classes.push("is-preferred");
+      if (hasFlights) classes.push("has-flights");
+      if (isExcluded) classes.push("is-excluded");
+      return `
+        <button
+          type="button"
+          class="${classes.join(" ")}"
+          data-date-key="${day.key}"
+          aria-pressed="${isExcluded ? "false" : "true"}"
+          title="${isPreferred ? "Preferred date" : ""}${hasFlights ? (isPreferred ? " \u00b7 has flights" : "Has flights") : ""}"
+        >
+          <span class="date-day-num">${day.day}</span>
+          <span class="date-day-month">${day.monthLabel}</span>
+        </button>`;
+    })
+    .join("");
 }
 
 // Selecting a dot on the scatter chart narrows the list on the left down to
@@ -1559,10 +1706,6 @@ function tripCardHtml(trip) {
         <div class="stat">
           <span class="stat-value">${trip.duration.toFixed(1)}h</span>
           <span class="stat-label">Total travel</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value">${trip.stopCount}</span>
-          <span class="stat-label">Stop${trip.stopCount === 1 ? "" : "s"}</span>
         </div>
       </div>
     </article>
