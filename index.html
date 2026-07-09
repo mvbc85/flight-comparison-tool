@@ -61,12 +61,11 @@
           </label>
         </div>
         <div class="result-count-group">
-          <div class="result-count" id="resultCount"></div>
           <button type="button" id="clearSelection" class="clear-selection" hidden>Show all routes</button>
         </div>
       </div>
 
-      <div class="panel-actions">
+      <div class="panel-actions" id="panelActions">
         <button type="button" id="filterToggle" class="action-btn filter-toggle-btn" aria-expanded="false" aria-controls="toolbarFilters">
           <svg class="action-icon" viewBox="0 0 24 24" aria-hidden="true">
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
@@ -398,7 +397,10 @@
         <div id="tripGrid" class="trip-grid"></div>
 
         <aside class="chart-panel">
-          <h2 class="chart-title">Cost vs. travel time</h2>
+          <div class="chart-header">
+            <h2 class="chart-title">Cost vs. travel time</h2>
+            <div class="result-count" id="resultCount"></div>
+          </div>
           <p class="chart-subtitle">
             Size = cash cost &middot; left half = outbound cabin &middot; right half = return cabin
             &middot; striped half = paid with points &middot; click a dot to isolate that trip in the list

@@ -203,6 +203,18 @@ select:focus {
   white-space: nowrap;
 }
 
+.chart-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin: 0 0 0.25rem;
+}
+
+.chart-header .chart-title {
+  margin: 0;
+}
+
 .result-count-group {
   display: flex;
   align-items: center;
@@ -846,6 +858,15 @@ select:focus {
   margin: 1.6rem auto 0;
 }
 
+@media (min-width: 761px) {
+  /* On desktop the Add button is moved into .toolbar-filters (next to Sort
+     by) by positionAddLegToggle() in app.js, and the Filter toggle button
+     is never shown at this width, so .panel-actions is left empty. */
+  .panel-actions {
+    display: none;
+  }
+}
+
 .action-btn {
   display: inline-flex;
   align-items: center;
@@ -876,6 +897,29 @@ select:focus {
 
 .add-leg-text-short {
   display: none;
+}
+
+.toolbar-filters .add-leg-toggle {
+  align-self: end;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-raised);
+}
+
+.toolbar-filters .add-leg-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.toolbar-filters .add-leg-toggle .action-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* ---------- Add a flight option ---------- */

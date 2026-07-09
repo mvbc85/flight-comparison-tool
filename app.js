@@ -103,6 +103,7 @@ const refs = {
   returnDateDays: document.getElementById("returnDateDays"),
   filterToggle: document.getElementById("filterToggle"),
   toolbarFilters: document.getElementById("toolbarFilters"),
+  panelActions: document.getElementById("panelActions"),
   resultCount: document.getElementById("resultCount"),
   clearSelection: document.getElementById("clearSelection"),
   viewToggle: document.getElementById("viewToggle"),
@@ -172,7 +173,21 @@ function wireEvents() {
   refs.departureDateDays.addEventListener("click", (event) => handleDateDayClick(event, APP.excludedDepartureDates));
   refs.returnDateDays.addEventListener("click", (event) => handleDateDayClick(event, APP.excludedReturnDates));
   refs.dateFilterPanel.addEventListener("click", handleDateNavClick);
+  positionAddLegToggle();
+  window.matchMedia("(max-width: 760px)").addEventListener("change", positionAddLegToggle);
   updateTripTypeVisibility();
+}
+
+// The "Add a flight option" button physically lives in .panelActions
+// (next to the mobile Filter button) in the HTML, but on desktop it's
+// relocated into .toolbar-filters, right after Sort by (see
+// .toolbar-filters .add-leg-toggle) - re-run whenever the viewport crosses
+// the mobile breakpoint so it always ends up in the right container.
+function positionAddLegToggle() {
+  const target = isMobileViewport() ? refs.panelActions : refs.toolbarFilters;
+  if (refs.addLegToggle.parentElement !== target) {
+    target.appendChild(refs.addLegToggle);
+  }
 }
 
 // The prev/next arrows either side of each date-filter-days row (see
