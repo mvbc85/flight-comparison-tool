@@ -406,11 +406,15 @@
           <div class="date-filter" id="dateFilterPanel">
             <div class="date-filter-row">
               <span class="date-filter-label">Depart</span>
+              <button type="button" class="date-nav-btn date-nav-prev" data-target="departureDateDays" aria-label="Show earlier departure dates">&lsaquo;</button>
               <div class="date-filter-days" id="departureDateDays"></div>
+              <button type="button" class="date-nav-btn date-nav-next" data-target="departureDateDays" aria-label="Show later departure dates">&rsaquo;</button>
             </div>
             <div class="date-filter-row">
               <span class="date-filter-label">Return</span>
+              <button type="button" class="date-nav-btn date-nav-prev" data-target="returnDateDays" aria-label="Show earlier return dates">&lsaquo;</button>
               <div class="date-filter-days" id="returnDateDays"></div>
+              <button type="button" class="date-nav-btn date-nav-next" data-target="returnDateDays" aria-label="Show later return dates">&rsaquo;</button>
             </div>
           </div>
           <svg id="scatterChart" class="scatter-chart" role="img" aria-label="Scatter plot of total cost against total travel time for every route"></svg>

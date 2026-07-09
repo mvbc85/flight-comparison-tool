@@ -98,6 +98,7 @@ const refs = {
   filterCabin: document.getElementById("filterCabin"),
   sortBy: document.getElementById("sortBy"),
   periodToggle: document.getElementById("periodToggle"),
+  dateFilterPanel: document.getElementById("dateFilterPanel"),
   departureDateDays: document.getElementById("departureDateDays"),
   returnDateDays: document.getElementById("returnDateDays"),
   filterToggle: document.getElementById("filterToggle"),
@@ -145,7 +146,25 @@ function wireEvents() {
   refs.periodToggle.addEventListener("click", handlePeriodToggleClick);
   refs.departureDateDays.addEventListener("click", (event) => handleDateDayClick(event, APP.excludedDepartureDates));
   refs.returnDateDays.addEventListener("click", (event) => handleDateDayClick(event, APP.excludedReturnDates));
+  refs.dateFilterPanel.addEventListener("click", handleDateNavClick);
   updateTripTypeVisibility();
+}
+
+// The prev/next arrows either side of each date-filter-days row (see
+// .date-nav-btn) scroll that row by roughly three days' width instead of
+// showing every day at once, which is what was blowing out the page width
+// on narrow/mobile viewports.
+function handleDateNavClick(event) {
+  const button = event.target.closest(".date-nav-btn");
+  if (!button) {
+    return;
+  }
+  const row = document.getElementById(button.dataset.target);
+  if (!row) {
+    return;
+  }
+  const step = row.clientWidth * 0.8 || 180;
+  row.scrollBy({ left: button.classList.contains("date-nav-prev") ? -step : step, behavior: "smooth" });
 }
 
 // A date-filter day (see .date-filter) toggles that calendar day in/out of

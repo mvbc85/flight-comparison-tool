@@ -536,9 +536,38 @@ select:focus {
 
 .date-filter-days {
   display: flex;
+  flex: 1;
+  min-width: 0;
   gap: 0.35rem;
   overflow-x: auto;
+  scroll-behavior: smooth;
   padding: 0.4rem 0.1rem 0.15rem;
+  scrollbar-width: none;
+}
+
+.date-filter-days::-webkit-scrollbar {
+  display: none;
+}
+
+.date-nav-btn {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg-raised);
+  color: var(--text-soft);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.date-nav-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .date-day {
@@ -1027,7 +1056,7 @@ select:focus {
   }
 
   .results-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .chart-panel {
