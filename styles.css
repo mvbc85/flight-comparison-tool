@@ -723,7 +723,9 @@ select:focus {
 }
 
 .scatter-dot.is-two-way .scatter-outline {
-  stroke-dasharray: 1.5 2.5;
+  stroke: var(--bad);
+  stroke-dasharray: 6 3;
+  stroke-width: 3;
   stroke-linecap: round;
 }
 
@@ -805,9 +807,9 @@ select:focus {
 }
 
 .legend-dot.legend-dot-two-way {
-  color: var(--text-soft);
+  color: var(--bad);
   background: none;
-  border-style: dotted;
+  border-style: dashed;
   border-width: 2px;
 }
 
