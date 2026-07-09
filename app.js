@@ -1194,6 +1194,11 @@ function makeTrip(outbound, ret, isCurrentBooking) {
     returnPeriod: classifyReturnPeriod(ret.legs[0].departureDateText),
     departureDateKey: dateKeyFromText(outbound.legs[0].departureDateText),
     returnDepartureDateKey: dateKeyFromText(ret.legs[0].departureDateText),
+    // A "two-way ticket": at least one leg was bought as a fixed,
+    // non-splittable package (see normalizeSplittable) and so can't be
+    // mixed with legs bought separately - highlighted with a dotted
+    // outline on the scatter chart (see .scatter-dot.is-two-way).
+    isTwoWayTicket: outbound.legs.concat(ret.legs).some((leg) => !leg.splittable),
     isCurrentBooking,
   };
 }
@@ -1562,7 +1567,7 @@ function scatterDot(trip, xScale, yScale, rScale) {
   const group = document.createElementNS(SVG_NS, "g");
   group.setAttribute(
     "class",
-    `scatter-dot${trip.isCurrentBooking ? " is-current" : ""}${isSelected ? " is-selected" : ""}`
+    `scatter-dot${trip.isCurrentBooking ? " is-current" : ""}${trip.isTwoWayTicket ? " is-two-way" : ""}${isSelected ? " is-selected" : ""}`
   );
   group.setAttribute("data-trip-id", trip.tripId);
   group.setAttribute("tabindex", "0");
