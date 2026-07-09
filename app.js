@@ -126,8 +126,33 @@ function nextLegSeq() {
 }
 
 wireEvents();
-if (!tryRestoreSession()) {
+// Local dev convenience only: when opened straight from disk (file://,
+// e.g. via the VS Code internal browser) rather than served over
+// https://, skip Google Sign-In entirely and load the bundled flights.csv
+// snapshot instead of hitting the live Apps Script backend. This can never
+// trigger on the real deployed site (always https://), so it's not a way
+// to bypass the actual access control - just a shortcut for local UI work.
+if (location.protocol === "file:") {
+  loadLocalDevData();
+} else if (!tryRestoreSession()) {
   waitForGoogleIdentity();
+}
+
+async function loadLocalDevData() {
+  refs.signInGate.hidden = true;
+  refs.mainLayout.hidden = false;
+  refs.signedInAs.hidden = false;
+  refs.signedInAs.textContent = "Local dev mode (Google Sign-In bypassed, using bundled flights.csv)";
+  try {
+    const response = await fetch("flights.csv");
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    hydrateFromCsv(await response.text());
+  } catch (error) {
+    refs.loadError.hidden = false;
+    refs.loadError.textContent = `Local dev mode: could not load flights.csv (${error.message}).`;
+  }
 }
 
 function wireEvents() {

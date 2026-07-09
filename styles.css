@@ -724,15 +724,9 @@ select:focus {
 
 .scatter-dot.is-two-way .scatter-outline {
   stroke: var(--bad);
-  stroke-dasharray: 6 3;
+  stroke-dasharray: 6 5;
   stroke-width: 3;
   stroke-linecap: round;
-}
-
-.scatter-dot.is-current .scatter-outline {
-  stroke: var(--accent);
-  stroke-dasharray: 6 4;
-  stroke-width: 3;
 }
 
 .scatter-dot.is-selected .scatter-outline {
