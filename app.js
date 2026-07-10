@@ -8,7 +8,7 @@ const APP = {
   excludedReturnDates: new Set(),
 };
 
-// ====== ONE-TIME SETUP: fill these in after following the setup guide ======
+// ===== ONE-TIME SETUP: fill these in after following the setup guide ======
 // googleClientId: OAuth 2.0 Client ID from Google Cloud Console (Credentials).
 // appsScriptUrl: the "Web app" URL from your Apps Script deployment.
 const CONFIG = {
