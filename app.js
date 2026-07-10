@@ -4,6 +4,7 @@ const APP = {
   trips: [],
   selectedTripId: null,
   returnPeriod: "before",
+  scatterMode: "totalVsDuration",
   excludedDepartureDates: new Set(),
   excludedReturnDates: new Set(),
 };
@@ -105,6 +106,9 @@ const refs = {
   toolbarFilters: document.getElementById("toolbarFilters"),
   panelActions: document.getElementById("panelActions"),
   resultCount: document.getElementById("resultCount"),
+  chartMode: document.getElementById("chartMode"),
+  chartTitle: document.getElementById("chartTitle"),
+  chartSubtitle: document.getElementById("chartSubtitle"),
   clearSelection: document.getElementById("clearSelection"),
   viewToggle: document.getElementById("viewToggle"),
   resultsLayout: document.getElementById("resultsLayout"),
@@ -170,12 +174,76 @@ function wireEvents() {
   refs.filterToggle.addEventListener("click", handleFilterToggleClick);
   refs.addLegToggle.addEventListener("click", handleAddLegToggleClick);
   refs.periodToggle.addEventListener("click", handlePeriodToggleClick);
+  if (refs.chartMode) {
+    refs.chartMode.addEventListener("change", handleChartModeChange);
+  }
   refs.departureDateDays.addEventListener("click", (event) => handleDateDayClick(event, APP.excludedDepartureDates));
   refs.returnDateDays.addEventListener("click", (event) => handleDateDayClick(event, APP.excludedReturnDates));
   refs.dateFilterPanel.addEventListener("click", handleDateNavClick);
   positionAddLegToggle();
   window.matchMedia("(max-width: 760px)").addEventListener("change", positionAddLegToggle);
   updateTripTypeVisibility();
+  syncChartModeUi();
+}
+
+function handleChartModeChange() {
+  APP.scatterMode = refs.chartMode.value;
+  syncChartModeUi();
+  renderTrips();
+}
+
+function getScatterModeConfig(mode = APP.scatterMode) {
+  if (mode === "cashVsDuration") {
+    return {
+      xAccessor: (trip) => trip.duration,
+      yAccessor: (trip) => trip.cashCost,
+      sizeAccessor: (trip) => trip.totalCost,
+      xTick: (value) => `${value.toFixed(0)}h`,
+      yTick: (value) => `$${value.toFixed(0)}`,
+      xAxisTitle: "Duration (hours)",
+      yAxisTitle: "Cash price (AUD)",
+      chartTitle: "Cash Price vs Duration",
+      chartSubtitle:
+        "Dot size = total price · left half = outbound cabin · right half = return cabin · striped half = paid with points · click a dot to isolate that trip in the list",
+      chartAriaLabel:
+        "Scatter plot of cash price against trip duration for every route; dot size represents total price",
+      tooltipYLabel: "Cash price",
+      tooltipSizeLabel: "Total price",
+    };
+  }
+
+  return {
+    xAccessor: (trip) => trip.duration,
+    yAccessor: (trip) => trip.totalCost,
+    sizeAccessor: (trip) => trip.cashCost,
+    xTick: (value) => `${value.toFixed(0)}h`,
+    yTick: (value) => `$${value.toFixed(0)}`,
+    xAxisTitle: "Duration (hours)",
+    yAxisTitle: "Total price (AUD)",
+    chartTitle: "Total Price vs Duration",
+    chartSubtitle:
+      "Dot size = cash price · left half = outbound cabin · right half = return cabin · striped half = paid with points · click a dot to isolate that trip in the list",
+    chartAriaLabel:
+      "Scatter plot of total price against trip duration for every route; dot size represents cash price",
+    tooltipYLabel: "Total price",
+    tooltipSizeLabel: "Cash price",
+  };
+}
+
+function syncChartModeUi() {
+  const config = getScatterModeConfig(APP.scatterMode);
+  if (refs.chartMode && refs.chartMode.value !== APP.scatterMode) {
+    refs.chartMode.value = APP.scatterMode;
+  }
+  if (refs.chartTitle) {
+    refs.chartTitle.textContent = config.chartTitle;
+  }
+  if (refs.chartSubtitle) {
+    refs.chartSubtitle.textContent = config.chartSubtitle;
+  }
+  if (refs.scatterChart) {
+    refs.scatterChart.setAttribute("aria-label", config.chartAriaLabel);
+  }
 }
 
 // The "Add a flight option" button physically lives in .panelActions
@@ -1461,44 +1529,46 @@ function renderScatterChart(trips) {
     return;
   }
 
+  const mode = getScatterModeConfig(APP.scatterMode);
+
   const plotLeft = CHART_MARGIN.left;
   const plotTop = CHART_MARGIN.top;
   const plotWidth = CHART_WIDTH - CHART_MARGIN.left - CHART_MARGIN.right;
   const plotHeight = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
 
-  const durations = trips.map((t) => t.duration);
-  const costs = trips.map((t) => t.totalCost);
-  const cashCosts = trips.map((t) => t.cashCost);
+  const xValues = trips.map((trip) => mode.xAccessor(trip));
+  const yValues = trips.map((trip) => mode.yAccessor(trip));
+  const sizeValues = trips.map((trip) => mode.sizeAccessor(trip));
 
-  const xDomain = niceDomain(Math.min(...durations), Math.max(...durations));
-  const yDomain = niceDomain(Math.min(...costs), Math.max(...costs));
-  const cashMin = Math.min(...cashCosts);
-  const cashMax = Math.max(...cashCosts);
+  const xDomain = niceDomain(Math.min(...xValues), Math.max(...xValues));
+  const yDomain = niceDomain(Math.min(...yValues), Math.max(...yValues));
+  const sizeMin = Math.min(...sizeValues);
+  const sizeMax = Math.max(...sizeValues);
 
   const xScale = (value) => plotLeft + ratio(value, xDomain) * plotWidth;
   const yScale = (value) => plotTop + plotHeight - ratio(value, yDomain) * plotHeight;
   const rScale = (value) => {
     const minR = 10;
     const maxR = 36;
-    if (cashMax === cashMin) {
+    if (sizeMax === sizeMin) {
       return (minR + maxR) / 2;
     }
     // Square-root scale so a dot's visual area (not just radius) is
-    // proportional to its cash cost.
-    return minR + Math.sqrt((value - cashMin) / (cashMax - cashMin)) * (maxR - minR);
+    // proportional to the active size metric.
+    return minR + Math.sqrt((value - sizeMin) / (sizeMax - sizeMin)) * (maxR - minR);
   };
 
   const svg = refs.scatterChart;
   svg.appendChild(scatterHatchDefs());
   svg.appendChild(
-    chartGridAndAxes(xDomain, yDomain, xScale, yScale, plotLeft, plotTop, plotWidth, plotHeight)
+    chartGridAndAxes(xDomain, yDomain, xScale, yScale, plotLeft, plotTop, plotWidth, plotHeight, mode)
   );
 
   // Draw larger dots first so small/cheap trips never get hidden behind big ones.
-  const ordered = trips.slice().sort((a, b) => b.cashCost - a.cashCost);
+  const ordered = trips.slice().sort((a, b) => mode.sizeAccessor(b) - mode.sizeAccessor(a));
 
   for (const trip of ordered) {
-    svg.appendChild(scatterDot(trip, xScale, yScale, rScale));
+    svg.appendChild(scatterDot(trip, xScale, yScale, rScale, mode));
   }
 }
 
@@ -1518,7 +1588,7 @@ function ratio(value, domain) {
   return (value - domain.min) / (domain.max - domain.min);
 }
 
-function chartGridAndAxes(xDomain, yDomain, xScale, yScale, left, top, width, height) {
+function chartGridAndAxes(xDomain, yDomain, xScale, yScale, left, top, width, height, mode) {
   const group = document.createElementNS(SVG_NS, "g");
   group.setAttribute("class", "chart-axes");
 
@@ -1528,22 +1598,22 @@ function chartGridAndAxes(xDomain, yDomain, xScale, yScale, left, top, width, he
     const xValue = xDomain.min + t * (xDomain.max - xDomain.min);
     const x = xScale(xValue);
     group.appendChild(svgLine(x, top, x, top + height, "chart-gridline"));
-    group.appendChild(svgText(x, top + height + 18, `${xValue.toFixed(0)}h`, "chart-tick-label chart-tick-x"));
+    group.appendChild(svgText(x, top + height + 18, mode.xTick(xValue), "chart-tick-label chart-tick-x"));
 
     const yValue = yDomain.min + t * (yDomain.max - yDomain.min);
     const y = yScale(yValue);
     group.appendChild(svgLine(left, y, left + width, y, "chart-gridline"));
-    group.appendChild(svgText(left - 10, y + 4, `$${yValue.toFixed(0)}`, "chart-tick-label chart-tick-y"));
+    group.appendChild(svgText(left - 10, y + 4, mode.yTick(yValue), "chart-tick-label chart-tick-y"));
   }
 
   group.appendChild(svgLine(left, top, left, top + height, "chart-axis-line"));
   group.appendChild(svgLine(left, top + height, left + width, top + height, "chart-axis-line"));
 
   group.appendChild(
-    svgText(left + width / 2, top + height + 38, "Total travel time", "chart-axis-title")
+    svgText(left + width / 2, top + height + 38, mode.xAxisTitle, "chart-axis-title")
   );
 
-  const yTitle = svgText(0, 0, "Total cost (AUD)", "chart-axis-title chart-axis-title-y");
+  const yTitle = svgText(0, 0, mode.yAxisTitle, "chart-axis-title chart-axis-title-y");
   yTitle.setAttribute("transform", `translate(${left - 40}, ${top + height / 2}) rotate(-90)`);
   group.appendChild(yTitle);
 
@@ -1596,10 +1666,10 @@ function scatterHatchDefs() {
   return defs;
 }
 
-function scatterDot(trip, xScale, yScale, rScale) {
-  const cx = xScale(trip.duration);
-  const cy = yScale(trip.totalCost);
-  const r = rScale(trip.cashCost);
+function scatterDot(trip, xScale, yScale, rScale, mode) {
+  const cx = xScale(mode.xAccessor(trip));
+  const cy = yScale(mode.yAccessor(trip));
+  const r = rScale(mode.sizeAccessor(trip));
   const isSelected = trip.tripId === APP.selectedTripId;
   const outboundHasPoints = trip.outboundLegs.some((leg) => leg.points > 0);
   const returnHasPoints = trip.returnLegs.some((leg) => leg.points > 0);
@@ -1637,9 +1707,11 @@ function scatterDot(trip, xScale, yScale, rScale) {
   const title = document.createElementNS(SVG_NS, "title");
   title.textContent = [
     routeLabel,
-    `Total cost: $${trip.totalCost.toFixed(0)}`,
-    `Cash cost: $${trip.cashCost.toFixed(0)}`,
+    `Total price: $${trip.totalCost.toFixed(0)}`,
+    `Cash price: $${trip.cashCost.toFixed(0)}`,
     `Total travel: ${trip.duration.toFixed(1)}h`,
+    `${mode.tooltipYLabel}: $${mode.yAccessor(trip).toFixed(0)}`,
+    `${mode.tooltipSizeLabel} (dot size): $${mode.sizeAccessor(trip).toFixed(0)}`,
     `Outbound cabin: ${trip.outboundCabin}${outboundHasPoints ? " (points)" : " (cash)"}`,
     `Return cabin: ${trip.returnCabin}${returnHasPoints ? " (points)" : " (cash)"}`,
     "Click to isolate this trip in the list",

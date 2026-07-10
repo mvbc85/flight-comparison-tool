@@ -398,11 +398,20 @@
 
         <aside class="chart-panel">
           <div class="chart-header">
-            <h2 class="chart-title">Cost vs. travel time</h2>
-            <div class="result-count" id="resultCount"></div>
+            <h2 class="chart-title" id="chartTitle">Total Price vs Duration</h2>
+            <div class="chart-header-controls">
+              <label class="chart-mode-field" for="chartMode">
+                <span>Scatter mode</span>
+                <select id="chartMode">
+                  <option value="totalVsDuration">Total Price vs Duration (Dot size = Cash Price)</option>
+                  <option value="cashVsDuration">Cash Price vs Duration (Dot size = Total Price)</option>
+                </select>
+              </label>
+              <div class="result-count" id="resultCount"></div>
+            </div>
           </div>
-          <p class="chart-subtitle">
-            Size = cash cost &middot; left half = outbound cabin &middot; right half = return cabin
+          <p class="chart-subtitle" id="chartSubtitle">
+            Dot size = cash price &middot; left half = outbound cabin &middot; right half = return cabin
             &middot; striped half = paid with points &middot; click a dot to isolate that trip in the list
           </p>
           <div class="date-filter" id="dateFilterPanel">
@@ -419,7 +428,7 @@
               <button type="button" class="date-nav-btn date-nav-next" data-target="returnDateDays" aria-label="Show later return dates">&rsaquo;</button>
             </div>
           </div>
-          <svg id="scatterChart" class="scatter-chart" role="img" aria-label="Scatter plot of total cost against total travel time for every route"></svg>
+          <svg id="scatterChart" class="scatter-chart" role="img" aria-label="Scatter plot of total price against trip duration for every route; dot size represents cash price"></svg>
           <p id="chartEmpty" class="chart-empty" hidden>No routes to plot yet.</p>
           <div class="chart-legend">
             <span class="legend-item"><i class="legend-dot cabin-economy"></i>Economy</span>

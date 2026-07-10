@@ -206,6 +206,7 @@ select:focus {
 .chart-header {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.8rem;
   margin: 0 0 0.25rem;
@@ -213,6 +214,30 @@ select:focus {
 
 .chart-header .chart-title {
   margin: 0;
+}
+
+.chart-header-controls {
+  display: flex;
+  align-items: end;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chart-mode-field {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: end;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.chart-mode-field select {
+  min-width: 260px;
+  max-width: 100%;
 }
 
 .result-count-group {
@@ -504,6 +529,10 @@ select:focus {
   border-radius: 14px;
   padding: 1.1rem 1.2rem 1.3rem;
   animation: riseIn 420ms ease-out both;
+}
+
+.chart-panel .result-count {
+  align-self: center;
 }
 
 .chart-title {
@@ -856,6 +885,28 @@ select:focus {
 .panel-actions {
   max-width: 760px;
   margin: 1.6rem auto 0;
+}
+
+@media (max-width: 760px) {
+  .chart-header {
+    align-items: flex-start;
+  }
+
+  .chart-header-controls {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .chart-mode-field {
+    justify-items: start;
+  }
+
+  .chart-mode-field select {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 @media (min-width: 761px) {
