@@ -735,6 +735,7 @@ function legToRow(leg) {
     points: leg.points,
     taxes_aud: leg.taxesAud,
     ticket_aud: leg.ticketAud,
+    active: leg.active ? "TRUE" : "FALSE",
     notes: leg.notes,
   };
 }
@@ -869,6 +870,11 @@ function normalizeRows(rows) {
   const travelLegs = [];
 
   for (const row of rows) {
+    // Rows explicitly marked inactive in the sheet are intentionally hidden
+    // from both the trip list and scatter plot without deleting their data.
+    if (!normalizeActive(row.active)) {
+      continue;
+    }
     const result = buildLegFromFields(row);
     if (result.error) {
       warnings.push(`Line ${row.__line}: ${result.error}, row skipped.`);
@@ -943,6 +949,7 @@ function buildLegFromFields(fields) {
     giftCardValue,
     totalCost: cashCost + giftCardValue,
     points,
+    active: normalizeActive(fields.active),
     flightClass: String(fields.cabin || "").trim() || "Unknown",
     airline: String(fields.airline || "Unknown").trim() || "Unknown",
     notes: String(fields.notes || "").trim(),
@@ -969,6 +976,13 @@ function normalizeDirection(rawDirection) {
 
 function normalizeSplittable(rawSplittable) {
   const v = String(rawSplittable || "").trim().toLowerCase();
+  return v !== "false";
+}
+
+function normalizeActive(rawActive) {
+  // Missing/blank values are treated as active for backward compatibility
+  // with older CSV snapshots that don't include this column yet.
+  const v = String(rawActive || "").trim().toLowerCase();
   return v !== "false";
 }
 

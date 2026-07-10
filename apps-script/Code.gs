@@ -5,7 +5,7 @@
 //    row is exactly these headers (same schema as flights.csv):
 //    id, direction, leg_order, splittable, origin, destination,
 //    departure_date, departure_time, arrival_date, arrival_time, cabin,
-//    airline, points, taxes_aud, ticket_aud, notes
+//    airline, points, taxes_aud, ticket_aud, active, notes
 // 2. Format the departure_date/arrival_date/departure_time/arrival_time
 //    columns as Plain Text (Format > Number > Plain text) BEFORE pasting in
 //    data, so dates like "25/09/2026" stay as text instead of becoming a
@@ -44,6 +44,7 @@ const HEADER = [
   "points",
   "taxes_aud",
   "ticket_aud",
+  "active",
   "notes",
 ];
 
