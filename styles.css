@@ -276,6 +276,16 @@ label {
   color: var(--text-faint);
 }
 
+.date-range-route-field {
+  display: grid;
+  gap: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
 select {
   font-family: var(--mono);
   font-size: 0.84rem;
@@ -454,13 +464,42 @@ input[type="date"] {
   width: 100%;
 }
 
-.date-range-fields select[multiple] {
+.city-multiselect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
   min-height: 5.9rem;
-  padding: 0.3rem 0.5rem;
+  padding: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
 }
 
-.date-range-fields select[multiple] option {
-  padding: 0.2rem 0.35rem;
+.city-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.42rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.city-choice:has(input:checked) {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.city-choice input {
+  width: 0.8rem;
+  height: 0.8rem;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .date-range-fields input:focus {

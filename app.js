@@ -364,6 +364,15 @@ function handleDateRangeInput(event) {
   const range = APP.dateRanges.find((item) => item.id === APP.selectedDateRangeId);
   if (!range) return;
   const field = input.dataset.rangeField;
+  if (input.classList.contains("date-range-city-input")) {
+    range[field] = updateCitySelection(range[field], input.dataset.city, input.checked);
+    renderDateRangePicker();
+    APP.selectedTripId = null;
+    APP.excludedDepartureDates.clear();
+    APP.excludedReturnDates.clear();
+    rebuildTrips();
+    return;
+  }
   range[field] = input.classList.contains("date-range-route-input")
     ? Array.from(input.selectedOptions, (option) => option.value).filter(Boolean)
     : input.value;
@@ -386,7 +395,7 @@ function renderDateRangePicker() {
   const range = APP.dateRanges.find((item) => item.id === APP.selectedDateRangeId);
   if (!range) return;
   populateRangeRouteOptions();
-  refs.dateRangePicker.querySelectorAll(".date-range-input").forEach((input) => {
+  refs.dateRangePicker.querySelectorAll(".date-range-input:not(.date-range-city-input)").forEach((input) => {
     input.value = range[input.dataset.rangeField] || "";
   });
   const invalidOrder = range.departureStart && range.departureEnd && range.departureStart > range.departureEnd;
@@ -704,14 +713,14 @@ function collectRouteCities(legs) {
 function populateRangeRouteOptions() {
   const cities = collectRouteCities(APP.travelLegs);
   const selectedRange = APP.dateRanges.find((range) => range.id === APP.selectedDateRangeId);
-  refs.dateRangePicker.querySelectorAll(".date-range-route-input").forEach((select) => {
-    const field = select.dataset.rangeField;
+  refs.dateRangePicker.querySelectorAll(".date-range-route-input").forEach((picker) => {
+    const field = picker.dataset.rangeField;
     const selectedCities = normalizeCitySelection(selectedRange && selectedRange[field]);
     const originCities = normalizeCitySelection(selectedRange && selectedRange.origin);
     const options = field === "destination" && originCities.length > 0
       ? cities.filter((city) => !originCities.includes(city))
       : cities;
-    replaceCityOptions(select, options, selectedCities);
+    replaceCityOptions(picker, options, selectedCities);
   });
 }
 
@@ -719,18 +728,33 @@ function normalizeCitySelection(value) {
   return [...new Set((Array.isArray(value) ? value : [value]).filter(Boolean))];
 }
 
-function replaceCityOptions(select, cities, selectedCities) {
-  const selected = new Set(normalizeCitySelection(selectedCities));
-  select.innerHTML = "";
-  for (const city of cities) {
-    const option = document.createElement("option");
-    option.value = city;
-    option.textContent = city;
-    option.selected = selected.has(city);
-    select.appendChild(option);
+function updateCitySelection(currentSelection, city, isSelected) {
+  const selection = new Set(normalizeCitySelection(currentSelection));
+  if (isSelected) {
+    selection.add(city);
+  } else {
+    selection.delete(city);
   }
-  if (!select.multiple) {
-    select.value = selectedCities[0] || "";
+  return [...selection];
+}
+
+function replaceCityOptions(picker, cities, selectedCities) {
+  const selected = new Set(normalizeCitySelection(selectedCities));
+  picker.innerHTML = "";
+  for (const city of cities) {
+    const label = document.createElement("label");
+    label.className = "city-choice";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "date-range-input date-range-city-input";
+    checkbox.dataset.rangeField = picker.dataset.rangeField;
+    checkbox.dataset.city = city;
+    checkbox.checked = selected.has(city);
+    const name = document.createElement("span");
+    name.textContent = city;
+    label.appendChild(checkbox);
+    label.appendChild(name);
+    picker.appendChild(label);
   }
 }
 

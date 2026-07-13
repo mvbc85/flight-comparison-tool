@@ -43,14 +43,14 @@
           <button type="button" class="date-range-tab" data-range-id="range-3" role="tab">Range 3</button>
         </div>
         <div class="date-range-fields">
-          <label>
+          <div class="date-range-route-field">
             <span>Origins</span>
-            <select class="date-range-input date-range-route-input" data-range-id="range-1" data-range-field="origin" aria-label="Origin cities for this range" multiple></select>
-          </label>
-          <label>
+            <div class="date-range-route-input city-multiselect" data-range-id="range-1" data-range-field="origin" role="group" aria-label="Origin cities for this range"></div>
+          </div>
+          <div class="date-range-route-field">
             <span>Destinations</span>
-            <select class="date-range-input date-range-route-input" data-range-id="range-1" data-range-field="destination" aria-label="Destination cities for this range" multiple></select>
-          </label>
+            <div class="date-range-route-input city-multiselect" data-range-id="range-1" data-range-field="destination" role="group" aria-label="Destination cities for this range"></div>
+          </div>
           <label>
             <span>Departure from</span>
             <input class="date-range-input" type="date" data-range-id="range-1" data-range-field="departureStart" />
