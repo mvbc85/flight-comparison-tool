@@ -348,6 +348,24 @@ function handleDateDayClick(event, excludedSet) {
 }
 
 function handleDateRangePickerClick(event) {
+  const selectionButton = event.target.closest(".city-selection-btn");
+  if (selectionButton) {
+    const range = APP.dateRanges.find((item) => item.id === APP.selectedDateRangeId);
+    if (!range) return;
+    const field = selectionButton.dataset.rangeField;
+    const cities = collectRouteCities(APP.travelLegs);
+    const availableCities = field === "destination"
+      ? cities.filter((city) => !normalizeCitySelection(range.origin).includes(city))
+      : cities;
+    range[field] = setCitySelection(range[field], availableCities, selectionButton.dataset.citySelectionAction);
+    renderDateRangePicker();
+    APP.selectedTripId = null;
+    APP.excludedDepartureDates.clear();
+    APP.excludedReturnDates.clear();
+    rebuildTrips();
+    return;
+  }
+
   const button = event.target.closest(".date-range-tab");
   if (!button || button.dataset.rangeId === APP.selectedDateRangeId) {
     return;
@@ -736,6 +754,16 @@ function updateCitySelection(currentSelection, city, isSelected) {
     selection.delete(city);
   }
   return [...selection];
+}
+
+function setCitySelection(currentSelection, availableCities, action) {
+  if (action === "all") {
+    return normalizeCitySelection(availableCities);
+  }
+  if (action === "none") {
+    return [];
+  }
+  return normalizeCitySelection(currentSelection);
 }
 
 function replaceCityOptions(picker, cities, selectedCities) {

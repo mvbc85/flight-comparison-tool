@@ -44,11 +44,23 @@
         </div>
         <div class="date-range-fields">
           <div class="date-range-route-field">
-            <span>Origins</span>
+            <div class="city-selector-heading">
+              <span>Origins</span>
+              <div class="city-selection-actions" role="group" aria-label="Origin city selection actions">
+                <button type="button" class="city-selection-btn" data-city-selection-action="all" data-range-field="origin">All</button>
+                <button type="button" class="city-selection-btn" data-city-selection-action="none" data-range-field="origin">None</button>
+              </div>
+            </div>
             <div class="date-range-route-input city-multiselect" data-range-id="range-1" data-range-field="origin" role="group" aria-label="Origin cities for this range"></div>
           </div>
           <div class="date-range-route-field">
-            <span>Destinations</span>
+            <div class="city-selector-heading">
+              <span>Destinations</span>
+              <div class="city-selection-actions" role="group" aria-label="Destination city selection actions">
+                <button type="button" class="city-selection-btn" data-city-selection-action="all" data-range-field="destination">All</button>
+                <button type="button" class="city-selection-btn" data-city-selection-action="none" data-range-field="destination">None</button>
+              </div>
+            </div>
             <div class="date-range-route-input city-multiselect" data-range-id="range-1" data-range-field="destination" role="group" aria-label="Destination cities for this range"></div>
           </div>
           <label>

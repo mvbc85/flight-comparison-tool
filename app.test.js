@@ -67,6 +67,7 @@ function loadAppApi() {
     tripCardHtml,
     collectRouteCities: typeof collectRouteCities === "function" ? collectRouteCities : undefined,
     updateCitySelection: typeof updateCitySelection === "function" ? updateCitySelection : undefined,
+    setCitySelection: typeof setCitySelection === "function" ? setCitySelection : undefined,
     DEFAULT_DATE_RANGES: typeof DEFAULT_DATE_RANGES === "object" ? DEFAULT_DATE_RANGES : undefined,
     tripMatchesDateRange: typeof tripMatchesDateRange === "function" ? tripMatchesDateRange : undefined,
     handleDatePickerPointerDown: typeof handleDatePickerPointerDown === "function" ? handleDatePickerPointerDown : undefined,
@@ -162,6 +163,16 @@ test("city selection toggles individual cities without replacing existing choice
 
   assert.deepEqual(Array.from(withBarcelona).sort(), ["Barcelona", "Madrid"]);
   assert.deepEqual(Array.from(withoutMadrid), ["Barcelona"]);
+});
+
+test("city selection All and None set the available cities or clear the selection", () => {
+  assert.equal(typeof api.setCitySelection, "function");
+
+  const allCities = api.setCitySelection(["Madrid"], ["Adelaide", "Barcelona", "Madrid"], "all");
+  const noCities = api.setCitySelection(allCities, ["Adelaide", "Barcelona", "Madrid"], "none");
+
+  assert.deepEqual(Array.from(allCities), ["Adelaide", "Barcelona", "Madrid"]);
+  assert.deepEqual(Array.from(noCities), []);
 });
 
 test("return route generation reverses the selected city pair", () => {
