@@ -133,6 +133,26 @@ test("outbound route generation uses the selected origin and destination", () =>
   assert.equal(routes[0].destination, "Paris");
 });
 
+test("outbound route generation accepts multiple selected origins and destinations", () => {
+  const routes = api.generateRoutes({
+    legs: [
+      leg("perth-madrid", "outbound", "Perth", "Madrid"),
+      leg("perth-barcelona", "outbound", "Perth", "Barcelona"),
+      leg("adelaide-madrid", "outbound", "Adelaide", "Madrid"),
+      leg("adelaide-barcelona", "outbound", "Adelaide", "Barcelona"),
+    ],
+    direction: "outbound",
+    originCities: ["Perth", "Adelaide"],
+    destinationCities: ["Madrid", "Barcelona"],
+  });
+
+  assert.equal(routes.length, 4);
+  assert.deepEqual(
+    Array.from(routes, (item) => `${item.legs[0].origin}-${item.destination}`).sort(),
+    ["Adelaide-Barcelona", "Adelaide-Madrid", "Perth-Barcelona", "Perth-Madrid"]
+  );
+});
+
 test("return route generation reverses the selected city pair", () => {
   const routes = api.generateRoutes({
     legs: [leg("ret", "return", "Paris", "Rome")],

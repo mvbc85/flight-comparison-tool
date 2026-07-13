@@ -363,12 +363,15 @@ function handleDateRangeInput(event) {
   if (!input) return;
   const range = APP.dateRanges.find((item) => item.id === APP.selectedDateRangeId);
   if (!range) return;
-  range[input.dataset.rangeField] = input.value;
+  const field = input.dataset.rangeField;
+  range[field] = input.classList.contains("date-range-route-input")
+    ? Array.from(input.selectedOptions, (option) => option.value).filter(Boolean)
+    : input.value;
   renderDateRangePicker();
   APP.selectedTripId = null;
   APP.excludedDepartureDates.clear();
   APP.excludedReturnDates.clear();
-  if (input.dataset.rangeField === "origin" || input.dataset.rangeField === "destination") {
+  if (field === "origin" || field === "destination") {
     rebuildTrips();
   } else {
     renderTrips();
@@ -627,7 +630,9 @@ function rebuildTrips() {
   populateRangeRouteOptions();
   updateRouteHeading();
 
-  if (!selectedRange || !selectedRange.origin || !selectedRange.destination) {
+  const originCities = normalizeCitySelection(selectedRange && selectedRange.origin);
+  const destinationCities = normalizeCitySelection(selectedRange && selectedRange.destination);
+  if (!selectedRange || originCities.length === 0 || destinationCities.length === 0) {
     APP.trips = [];
     renderTrips();
     return;
@@ -650,14 +655,14 @@ function rebuildTrips() {
   const outboundRoutes = generateRoutes({
     legs: mixableLegs,
     direction: "outbound",
-    originCity: selectedRange.origin,
-    destinationCity: selectedRange.destination,
+    originCities,
+    destinationCities,
   });
   const returnRoutes = generateRoutes({
     legs: mixableLegs,
     direction: "return",
-    originCity: selectedRange.origin,
-    destinationCity: selectedRange.destination,
+    originCities,
+    destinationCities,
   });
 
   const trips = buildAllTrips(outboundRoutes, returnRoutes);
@@ -666,14 +671,14 @@ function rebuildTrips() {
     const packageOutbound = findBestRouteForDirection(
       legs,
       "outbound",
-      selectedRange.origin,
-      selectedRange.destination
+      originCities,
+      destinationCities
     );
     const packageReturn = findBestRouteForDirection(
       legs,
       "return",
-      selectedRange.origin,
-      selectedRange.destination
+      originCities,
+      destinationCities
     );
     if (packageOutbound && packageReturn) {
       trips.unshift(makeTrip(packageOutbound, packageReturn, id === "1"));
@@ -701,29 +706,40 @@ function populateRangeRouteOptions() {
   const selectedRange = APP.dateRanges.find((range) => range.id === APP.selectedDateRangeId);
   refs.dateRangePicker.querySelectorAll(".date-range-route-input").forEach((select) => {
     const field = select.dataset.rangeField;
-    const options = field === "destination" && selectedRange && selectedRange.origin
-      ? cities.filter((city) => city !== selectedRange.origin)
+    const selectedCities = normalizeCitySelection(selectedRange && selectedRange[field]);
+    const originCities = normalizeCitySelection(selectedRange && selectedRange.origin);
+    const options = field === "destination" && originCities.length > 0
+      ? cities.filter((city) => !originCities.includes(city))
       : cities;
-    replaceCityOptions(select, options, selectedRange && selectedRange[field]);
+    replaceCityOptions(select, options, selectedCities);
   });
 }
 
-function replaceCityOptions(select, cities, selectedCity) {
-  select.innerHTML = '<option value="">Choose a city</option>';
+function normalizeCitySelection(value) {
+  return [...new Set((Array.isArray(value) ? value : [value]).filter(Boolean))];
+}
+
+function replaceCityOptions(select, cities, selectedCities) {
+  const selected = new Set(normalizeCitySelection(selectedCities));
+  select.innerHTML = "";
   for (const city of cities) {
     const option = document.createElement("option");
     option.value = city;
     option.textContent = city;
-    option.selected = city === selectedCity;
+    option.selected = selected.has(city);
     select.appendChild(option);
   }
-  select.value = selectedCity || "";
+  if (!select.multiple) {
+    select.value = selectedCities[0] || "";
+  }
 }
 
 function updateRouteHeading() {
   const selectedRange = APP.dateRanges.find((range) => range.id === APP.selectedDateRangeId);
-  const routeName = selectedRange && selectedRange.origin && selectedRange.destination
-    ? `${selectedRange.origin} to ${selectedRange.destination}`
+  const origins = normalizeCitySelection(selectedRange && selectedRange.origin);
+  const destinations = normalizeCitySelection(selectedRange && selectedRange.destination);
+  const routeName = origins.length && destinations.length
+    ? `${origins.join(" or ")} to ${destinations.join(" or ")}`
     : "Choose your route";
   refs.routeTitle.textContent = routeName;
   document.title = `${routeName} · Route Finder`;
@@ -1255,8 +1271,18 @@ function findBestRouteForDirection(legs, direction, originCity, destinationCity)
   return routes.sort((a, b) => a.duration - b.duration)[0];
 }
 
-function generateRoutes({ legs, direction, originCity, destinationCity, maxHops = 6 }) {
-  if (!originCity || !destinationCity || originCity === destinationCity) {
+function generateRoutes({
+  legs,
+  direction,
+  originCity,
+  destinationCity,
+  originCities = originCity,
+  destinationCities = destinationCity,
+  maxHops = 6,
+}) {
+  const origins = normalizeCitySelection(originCities);
+  const destinations = normalizeCitySelection(destinationCities).filter((city) => !origins.includes(city));
+  if (origins.length === 0 || destinations.length === 0) {
     return [];
   }
 
@@ -1280,27 +1306,31 @@ function generateRoutes({ legs, direction, originCity, destinationCity, maxHops 
   const routes = [];
 
   if (direction === "outbound") {
-    dfsRoutes({
-      adjacency,
-      city: originCity,
-      targetCities: new Set([destinationCity]),
-      legs: [],
-      routes,
-      maxHops,
-      visited: new Set([originCity]),
-      direction,
-    });
+    for (const city of origins) {
+      dfsRoutes({
+        adjacency,
+        city,
+        targetCities: new Set(destinations),
+        legs: [],
+        routes,
+        maxHops,
+        visited: new Set([city]),
+        direction,
+      });
+    }
   } else {
-    dfsRoutes({
-      adjacency,
-      city: destinationCity,
-      targetCities: new Set([originCity]),
-      legs: [],
-      routes,
-      maxHops,
-      visited: new Set([destinationCity]),
-      direction,
-    });
+    for (const city of destinations) {
+      dfsRoutes({
+        adjacency,
+        city,
+        targetCities: new Set(origins),
+        legs: [],
+        routes,
+        maxHops,
+        visited: new Set([city]),
+        direction,
+      });
+    }
   }
 
   return dedupeRoutes(routes);

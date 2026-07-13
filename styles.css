@@ -454,6 +454,15 @@ input[type="date"] {
   width: 100%;
 }
 
+.date-range-fields select[multiple] {
+  min-height: 5.9rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.date-range-fields select[multiple] option {
+  padding: 0.2rem 0.35rem;
+}
+
 .date-range-fields input:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
