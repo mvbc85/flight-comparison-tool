@@ -445,6 +445,10 @@ select:focus {
   font-size: 0.78rem;
 }
 
+input[type="date"] {
+  cursor: pointer;
+}
+
 .date-range-fields select {
   min-width: 0;
   width: 100%;

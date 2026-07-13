@@ -40,6 +40,7 @@ function loadAppApi() {
       if (!elements.has(id)) elements.set(id, makeElement(id));
       return elements.get(id);
     },
+    querySelectorAll() { return []; },
     createElement: () => makeElement(),
     createElementNS: () => makeElement(),
   };
@@ -66,7 +67,9 @@ function loadAppApi() {
     tripCardHtml,
     collectRouteCities: typeof collectRouteCities === "function" ? collectRouteCities : undefined,
     DEFAULT_DATE_RANGES: typeof DEFAULT_DATE_RANGES === "object" ? DEFAULT_DATE_RANGES : undefined,
-    tripMatchesDateRange: typeof tripMatchesDateRange === "function" ? tripMatchesDateRange : undefined
+    tripMatchesDateRange: typeof tripMatchesDateRange === "function" ? tripMatchesDateRange : undefined,
+    handleDatePickerPointerDown: typeof handleDatePickerPointerDown === "function" ? handleDatePickerPointerDown : undefined,
+    handleDatePickerKeyDown: typeof handleDatePickerKeyDown === "function" ? handleDatePickerKeyDown : undefined
   };`;
   vm.runInContext(source + exportsForTest, sandbox, { filename: appPath });
   return sandbox.__appTest;
@@ -234,4 +237,33 @@ test("a trip matches a range only when both departure and return dates are insid
   assert.equal(api.tripMatchesDateRange(matchingTrip, selectedRange), true);
   assert.equal(api.tripMatchesDateRange(wrongDeparture, selectedRange), false);
   assert.equal(api.tripMatchesDateRange(wrongReturn, selectedRange), false);
+});
+
+test("date fields open the native picker and prevent typed date entry", () => {
+  assert.equal(typeof api.handleDatePickerPointerDown, "function");
+  assert.equal(typeof api.handleDatePickerKeyDown, "function");
+
+  let pickerCalls = 0;
+  let pointerDefaultPrevented = false;
+  let keyDefaultPrevented = false;
+  const dateInput = { showPicker: () => { pickerCalls += 1; } };
+
+  api.handleDatePickerPointerDown({
+    currentTarget: dateInput,
+    preventDefault: () => { pointerDefaultPrevented = true; },
+  });
+  api.handleDatePickerKeyDown({
+    currentTarget: dateInput,
+    key: "2",
+    preventDefault: () => { keyDefaultPrevented = true; },
+  });
+  api.handleDatePickerKeyDown({
+    currentTarget: dateInput,
+    key: "Enter",
+    preventDefault() {},
+  });
+
+  assert.equal(pickerCalls, 2);
+  assert.equal(pointerDefaultPrevented, true);
+  assert.equal(keyDefaultPrevented, true);
 });

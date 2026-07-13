@@ -185,6 +185,7 @@ async function loadLocalDevData() {
 }
 
 function wireEvents() {
+  wireDatePickerInputs();
   refs.filterCabin.addEventListener("change", renderTrips);
   refs.sortBy.addEventListener("change", renderTrips);
   refs.addLegForm.addEventListener("submit", handleAddLegSubmit);
@@ -210,6 +211,33 @@ function wireEvents() {
   syncChartModeUi();
   APP.dateRanges = DEFAULT_DATE_RANGES.map((range) => ({ ...range }));
   renderDateRangePicker();
+}
+
+// Native date fields still permit typing on desktop browsers. Open the same
+// native calendar used on mobile instead, while retaining the browser's
+// default behaviour as a fallback where `showPicker()` is unavailable.
+function wireDatePickerInputs() {
+  document.querySelectorAll('input[type="date"]').forEach((input) => {
+    input.addEventListener("pointerdown", handleDatePickerPointerDown);
+    input.addEventListener("keydown", handleDatePickerKeyDown);
+  });
+}
+
+function handleDatePickerPointerDown(event) {
+  const input = event.currentTarget;
+  if (typeof input.showPicker !== "function") return;
+  event.preventDefault();
+  input.showPicker();
+}
+
+function handleDatePickerKeyDown(event) {
+  const input = event.currentTarget;
+  if (typeof input.showPicker !== "function") return;
+  if (event.key === "Tab") return;
+  event.preventDefault();
+  if (["Enter", " ", "ArrowDown", "F4"].includes(event.key)) {
+    input.showPicker();
+  }
 }
 
 function handleChartModeChange() {
