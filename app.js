@@ -2,8 +2,11 @@ const APP = {
   travelLegs: [],
   warnings: [],
   trips: [],
+  originCity: null,
+  destinationCity: null,
   selectedTripId: null,
-  returnPeriod: "before",
+  selectedDateRangeId: "range-1",
+  dateRanges: [],
   scatterMode: "totalVsDuration",
   excludedDepartureDates: new Set(),
   excludedReturnDates: new Set(),
@@ -31,23 +34,44 @@ let idToken = null;
 // load and cleared automatically once it's stale or rejected by the backend.
 const ID_TOKEN_STORAGE_KEY = "vuelos2026.idToken";
 
-const EUROPE_CITIES = ["Madrid", "Barcelona"];
-const ORIGIN_CITY = "Perth";
+const DEFAULT_ORIGIN_CITY = "Perth";
+const DEFAULT_DESTINATION_CITY = "Madrid";
 const MAX_LAYOVER_HOURS = 12;
-// The two return-period views (see .period-toggle) split trips by the local
-// departure date of their first return leg - on or after this UTC-midnight
-// instant counts as "after", everything earlier counts as "before".
-const RETURN_PERIOD_SPLIT_MS = Date.UTC(2026, 9, 15);
-
-// Hardcoded preferred dates for the calendar date-filter strips above the
-// scatter chart (see .date-filter) - highlighted with a different colour
-// among whichever days actually have flights. The preferred return date
-// depends on which of Manuel's/Isabel's return views is active.
-const PREFERRED_DEPARTURE_DATE = { year: 2026, month: 9, day: 24 };
-const PREFERRED_RETURN_DATE_BY_PERIOD = {
-  before: { year: 2026, month: 10, day: 4 }, // Manuel's Return
-  after: { year: 2026, month: 10, day: 31 }, // Isabel's Return
-};
+// Three editable departure/return range presets. The first two preserve the
+// old Manuel/Isabel split (return before 15 October vs return on/after it).
+// The third is intentionally blank so the user can define it.
+const DEFAULT_DATE_RANGES = [
+  {
+    id: "range-1",
+    label: "Range 1",
+    origin: "Perth",
+    destination: "Madrid",
+    departureStart: "2026-09-21",
+    departureEnd: "2026-09-25",
+    returnStart: "2026-10-01",
+    returnEnd: "2026-10-14",
+  },
+  {
+    id: "range-2",
+    label: "Range 2",
+    origin: "Perth",
+    destination: "Madrid",
+    departureStart: "2026-09-21",
+    departureEnd: "2026-09-25",
+    returnStart: "2026-10-15",
+    returnEnd: "2026-11-05",
+  },
+  {
+    id: "range-3",
+    label: "Range 3",
+    origin: "",
+    destination: "",
+    departureStart: "",
+    departureEnd: "",
+    returnStart: "",
+    returnEnd: "",
+  },
+];
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const CABIN_RANK = {
@@ -91,14 +115,14 @@ const CITY_TIMEZONES = {
 const refs = {
   loadError: document.getElementById("loadError"),
   mainLayout: document.getElementById("mainLayout"),
+  routeTitle: document.getElementById("routeTitle"),
   signInGate: document.getElementById("signInGate"),
   googleSignInButton: document.getElementById("googleSignInButton"),
   signInError: document.getElementById("signInError"),
   signedInAs: document.getElementById("signedInAs"),
-  filterDestination: document.getElementById("filterDestination"),
   filterCabin: document.getElementById("filterCabin"),
   sortBy: document.getElementById("sortBy"),
-  periodToggle: document.getElementById("periodToggle"),
+  dateRangePicker: document.getElementById("dateRangePicker"),
   dateFilterPanel: document.getElementById("dateFilterPanel"),
   departureDateDays: document.getElementById("departureDateDays"),
   returnDateDays: document.getElementById("returnDateDays"),
@@ -161,7 +185,6 @@ async function loadLocalDevData() {
 }
 
 function wireEvents() {
-  refs.filterDestination.addEventListener("change", renderTrips);
   refs.filterCabin.addEventListener("change", renderTrips);
   refs.sortBy.addEventListener("change", renderTrips);
   refs.addLegForm.addEventListener("submit", handleAddLegSubmit);
@@ -173,7 +196,8 @@ function wireEvents() {
   refs.viewToggle.addEventListener("click", handleViewToggleClick);
   refs.filterToggle.addEventListener("click", handleFilterToggleClick);
   refs.addLegToggle.addEventListener("click", handleAddLegToggleClick);
-  refs.periodToggle.addEventListener("click", handlePeriodToggleClick);
+  refs.dateRangePicker.addEventListener("click", handleDateRangePickerClick);
+  refs.dateRangePicker.addEventListener("input", handleDateRangeInput);
   if (refs.chartMode) {
     refs.chartMode.addEventListener("change", handleChartModeChange);
   }
@@ -184,6 +208,8 @@ function wireEvents() {
   window.matchMedia("(max-width: 760px)").addEventListener("change", positionAddLegToggle);
   updateTripTypeVisibility();
   syncChartModeUi();
+  APP.dateRanges = DEFAULT_DATE_RANGES.map((range) => ({ ...range }));
+  renderDateRangePicker();
 }
 
 function handleChartModeChange() {
@@ -293,20 +319,52 @@ function handleDateDayClick(event, excludedSet) {
   renderTrips();
 }
 
-// Switches between the "return before 15 Oct" and "return after 15 Oct"
-// views (see .period-toggle); affects both the trip list and the scatter
-// chart, since both are driven by the same filtered set in renderTrips().
-function handlePeriodToggleClick(event) {
-  const button = event.target.closest(".period-toggle-btn");
-  if (!button || button.dataset.period === APP.returnPeriod) {
+function handleDateRangePickerClick(event) {
+  const button = event.target.closest(".date-range-tab");
+  if (!button || button.dataset.rangeId === APP.selectedDateRangeId) {
     return;
   }
-  APP.returnPeriod = button.dataset.period;
-  refs.periodToggle.querySelectorAll(".period-toggle-btn").forEach((btn) => {
-    btn.classList.toggle("is-active", btn.dataset.period === APP.returnPeriod);
-  });
+  APP.selectedDateRangeId = button.dataset.rangeId;
+  renderDateRangePicker();
   APP.selectedTripId = null;
   renderTrips();
+}
+
+function handleDateRangeInput(event) {
+  const input = event.target.closest(".date-range-input");
+  if (!input) return;
+  const range = APP.dateRanges.find((item) => item.id === APP.selectedDateRangeId);
+  if (!range) return;
+  range[input.dataset.rangeField] = input.value;
+  renderDateRangePicker();
+  APP.selectedTripId = null;
+  APP.excludedDepartureDates.clear();
+  APP.excludedReturnDates.clear();
+  if (input.dataset.rangeField === "origin" || input.dataset.rangeField === "destination") {
+    rebuildTrips();
+  } else {
+    renderTrips();
+  }
+}
+
+function renderDateRangePicker() {
+  if (!refs.dateRangePicker) return;
+  refs.dateRangePicker.querySelectorAll(".date-range-tab").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.rangeId === APP.selectedDateRangeId);
+  });
+  const range = APP.dateRanges.find((item) => item.id === APP.selectedDateRangeId);
+  if (!range) return;
+  populateRangeRouteOptions();
+  refs.dateRangePicker.querySelectorAll(".date-range-input").forEach((input) => {
+    input.value = range[input.dataset.rangeField] || "";
+  });
+  const invalidOrder = range.departureStart && range.departureEnd && range.departureStart > range.departureEnd;
+  const invalidReturnOrder = range.returnStart && range.returnEnd && range.returnStart > range.returnEnd;
+  const status = refs.dateRangePicker.querySelector(".date-range-status");
+  if (status) {
+    status.hidden = !(invalidOrder || invalidReturnOrder);
+    status.textContent = invalidOrder || invalidReturnOrder ? "Each start date must be on or before its end date." : "";
+  }
 }
 
 // Mobile-only: the Destination/Cabin/Sort by row is collapsed behind a
@@ -537,6 +595,16 @@ function rebuildTrips() {
   }
   refs.loadError.hidden = true;
 
+  const selectedRange = APP.dateRanges.find((range) => range.id === APP.selectedDateRangeId);
+  populateRangeRouteOptions();
+  updateRouteHeading();
+
+  if (!selectedRange || !selectedRange.origin || !selectedRange.destination) {
+    APP.trips = [];
+    renderTrips();
+    return;
+  }
+
   // An id is a fixed, non-splittable package when any of its rows says so
   // (splittable = FALSE) - its outbound and return legs must stay together
   // and can't be recombined with any other option.
@@ -551,14 +619,34 @@ function rebuildTrips() {
   }
   const mixableLegs = APP.travelLegs.filter((leg) => !packageIds.has(leg.id));
 
-  const outboundRoutes = generateRoutes({ legs: mixableLegs, direction: "outbound" });
-  const returnRoutes = generateRoutes({ legs: mixableLegs, direction: "return" });
+  const outboundRoutes = generateRoutes({
+    legs: mixableLegs,
+    direction: "outbound",
+    originCity: selectedRange.origin,
+    destinationCity: selectedRange.destination,
+  });
+  const returnRoutes = generateRoutes({
+    legs: mixableLegs,
+    direction: "return",
+    originCity: selectedRange.origin,
+    destinationCity: selectedRange.destination,
+  });
 
   const trips = buildAllTrips(outboundRoutes, returnRoutes);
 
   for (const [id, legs] of packageLegsById.entries()) {
-    const packageOutbound = findBestRouteForDirection(legs, "outbound");
-    const packageReturn = findBestRouteForDirection(legs, "return");
+    const packageOutbound = findBestRouteForDirection(
+      legs,
+      "outbound",
+      selectedRange.origin,
+      selectedRange.destination
+    );
+    const packageReturn = findBestRouteForDirection(
+      legs,
+      "return",
+      selectedRange.origin,
+      selectedRange.destination
+    );
     if (packageOutbound && packageReturn) {
       trips.unshift(makeTrip(packageOutbound, packageReturn, id === "1"));
     }
@@ -569,6 +657,48 @@ function rebuildTrips() {
   populateCabinFilter();
   refs.mainLayout.hidden = false;
   renderTrips();
+}
+
+function collectRouteCities(legs) {
+  const cities = new Set();
+  for (const leg of legs) {
+    if (leg.origin) cities.add(leg.origin);
+    if (leg.destination) cities.add(leg.destination);
+  }
+  return [...cities].sort((a, b) => a.localeCompare(b));
+}
+
+function populateRangeRouteOptions() {
+  const cities = collectRouteCities(APP.travelLegs);
+  const selectedRange = APP.dateRanges.find((range) => range.id === APP.selectedDateRangeId);
+  refs.dateRangePicker.querySelectorAll(".date-range-route-input").forEach((select) => {
+    const field = select.dataset.rangeField;
+    const options = field === "destination" && selectedRange && selectedRange.origin
+      ? cities.filter((city) => city !== selectedRange.origin)
+      : cities;
+    replaceCityOptions(select, options, selectedRange && selectedRange[field]);
+  });
+}
+
+function replaceCityOptions(select, cities, selectedCity) {
+  select.innerHTML = '<option value="">Choose a city</option>';
+  for (const city of cities) {
+    const option = document.createElement("option");
+    option.value = city;
+    option.textContent = city;
+    option.selected = city === selectedCity;
+    select.appendChild(option);
+  }
+  select.value = selectedCity || "";
+}
+
+function updateRouteHeading() {
+  const selectedRange = APP.dateRanges.find((range) => range.id === APP.selectedDateRangeId);
+  const routeName = selectedRange && selectedRange.origin && selectedRange.destination
+    ? `${selectedRange.origin} to ${selectedRange.destination}`
+    : "Choose your route";
+  refs.routeTitle.textContent = routeName;
+  document.title = `${routeName} · Route Finder`;
 }
 
 function populateCabinFilter() {
@@ -675,16 +805,12 @@ function handleAddReturnTrip(get) {
   returnFields.direction = "return";
   returnFields.leg_order = "1";
 
-  // A round trip that departs Perth, stops in a single Europe gateway city
-  // (Madrid or Barcelona), and returns to Perth from that same city is a
-  // fixed return-ticket package - its two legs can't be split apart or
-  // recombined with any other option. Anything else (e.g. flying home from
-  // a different city, or via a different gateway) stays mixable.
+  // A round trip using the same city pair in reverse is a fixed return-ticket
+  // package: its two legs stay together and can't be recombined with another
+  // option. Open-jaw trips remain mixable.
   const isFixedPackage =
-    normalizeCity(outboundFields.origin) === ORIGIN_CITY &&
-    normalizeCity(returnFields.destination) === ORIGIN_CITY &&
-    normalizeCity(outboundFields.destination) === normalizeCity(returnFields.origin) &&
-    EUROPE_CITIES.includes(normalizeCity(outboundFields.destination));
+    normalizeCity(outboundFields.origin) === normalizeCity(returnFields.destination) &&
+    normalizeCity(outboundFields.destination) === normalizeCity(returnFields.origin);
 
   const id = nextAutoId();
   outboundFields.id = id;
@@ -1087,27 +1213,35 @@ function toNum(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function findBestRouteForDirection(legs, direction) {
-  const routes = generateRoutes({ legs, direction, maxHops: 6 });
+function findBestRouteForDirection(legs, direction, originCity, destinationCity) {
+  const routes = generateRoutes({
+    legs,
+    direction,
+    originCity,
+    destinationCity,
+    maxHops: 6,
+  });
   if (routes.length === 0) {
     return null;
   }
   return routes.sort((a, b) => a.duration - b.duration)[0];
 }
 
-function generateRoutes({ legs, direction, maxHops = 6 }) {
+function generateRoutes({ legs, direction, originCity, destinationCity, maxHops = 6 }) {
+  if (!originCity || !destinationCity || originCity === destinationCity) {
+    return [];
+  }
+
   const validLegs = legs.filter(
     (leg) => leg.direction === direction && leg.departure && leg.arrival
   );
 
   const adjacency = new Map();
-  const hasIncoming = new Set();
   for (const leg of validLegs) {
     if (!adjacency.has(leg.origin)) {
       adjacency.set(leg.origin, []);
     }
     adjacency.get(leg.origin).push(leg);
-    hasIncoming.add(leg.destination);
   }
 
   for (const [city, cityLegs] of adjacency.entries()) {
@@ -1120,39 +1254,25 @@ function generateRoutes({ legs, direction, maxHops = 6 }) {
   if (direction === "outbound") {
     dfsRoutes({
       adjacency,
-      city: ORIGIN_CITY,
-      targetCities: new Set(EUROPE_CITIES),
+      city: originCity,
+      targetCities: new Set([destinationCity]),
       legs: [],
       routes,
       maxHops,
-      visited: new Set([ORIGIN_CITY]),
+      visited: new Set([originCity]),
       direction,
     });
   } else {
-    // A valid return start is Madrid/Barcelona, or any city that nothing
-    // else in the return-only graph flies into (a genuine chain head, not
-    // an interior connection like Brisbane, which only exists downstream
-    // of Amsterdam).
-    const candidateStarts = new Set(EUROPE_CITIES);
-    for (const city of adjacency.keys()) {
-      if (city !== ORIGIN_CITY && !hasIncoming.has(city)) {
-        candidateStarts.add(city);
-      }
-    }
-    candidateStarts.delete(ORIGIN_CITY);
-
-    for (const start of candidateStarts) {
-      dfsRoutes({
-        adjacency,
-        city: start,
-        targetCities: new Set([ORIGIN_CITY]),
-        legs: [],
-        routes,
-        maxHops,
-        visited: new Set([start]),
-        direction,
-      });
-    }
+    dfsRoutes({
+      adjacency,
+      city: destinationCity,
+      targetCities: new Set([originCity]),
+      legs: [],
+      routes,
+      maxHops,
+      visited: new Set([destinationCity]),
+      direction,
+    });
   }
 
   return dedupeRoutes(routes);
@@ -1297,6 +1417,7 @@ function buildAllTrips(outboundRoutes, returnRoutes) {
 function makeTrip(outbound, ret, isCurrentBooking) {
   return {
     tripId: `${outbound.routeId}::${ret.routeId}`,
+    origin: outbound.legs[0].origin,
     destination: outbound.destination,
     returnOrigin: ret.legs[0].origin,
     outboundLegs: outbound.legs,
@@ -1313,7 +1434,6 @@ function makeTrip(outbound, ret, isCurrentBooking) {
     cabinsUsed: [...new Set(outbound.cabinsUsed.concat(ret.cabinsUsed))],
     outboundCabin: outbound.bestCabin,
     returnCabin: ret.bestCabin,
-    returnPeriod: classifyReturnPeriod(ret.legs[0].departureDateText),
     departureDateKey: dateKeyFromText(outbound.legs[0].departureDateText),
     returnDepartureDateKey: dateKeyFromText(ret.legs[0].departureDateText),
     // A "two-way ticket": at least one leg was bought as a fixed,
@@ -1325,16 +1445,19 @@ function makeTrip(outbound, ret, isCurrentBooking) {
   };
 }
 
-// Classifies a trip's return leg by whether its (first leg's) local
-// departure date falls before or on/after 15 October - drives the
-// .period-toggle view split (see RETURN_PERIOD_SPLIT_MS).
-function classifyReturnPeriod(departureDateText) {
-  const parts = parseDateParts(departureDateText);
-  if (!parts) {
-    return "before";
+function tripMatchesDateRange(trip, range) {
+  if (!range || !range.departureStart || !range.departureEnd || !range.returnStart || !range.returnEnd) {
+    return false;
   }
-  const ms = Date.UTC(parts.year, parts.month - 1, parts.day);
-  return ms >= RETURN_PERIOD_SPLIT_MS ? "after" : "before";
+  if (range.departureStart > range.departureEnd || range.returnStart > range.returnEnd) {
+    return false;
+  }
+  return (
+    trip.departureDateKey >= range.departureStart &&
+    trip.departureDateKey <= range.departureEnd &&
+    trip.returnDepartureDateKey >= range.returnStart &&
+    trip.returnDepartureDateKey <= range.returnEnd
+  );
 }
 
 function bestCabinRank(trip) {
@@ -1342,15 +1465,11 @@ function bestCabinRank(trip) {
 }
 
 function renderTrips() {
-  const destinationFilter = refs.filterDestination.value;
   const cabinFilter = refs.filterCabin.value;
   const sortBy = refs.sortBy.value;
+  const selectedRange = APP.dateRanges.find((range) => range.id === APP.selectedDateRangeId);
 
-  let trips = APP.trips.filter((trip) => trip.returnPeriod === APP.returnPeriod);
-
-  trips = trips.filter((trip) =>
-    destinationFilter === "all" ? true : trip.destination === destinationFilter
-  );
+  let trips = APP.trips.filter((trip) => tripMatchesDateRange(trip, selectedRange));
 
   trips = trips.filter((trip) =>
     cabinFilter === "all" ? true : trip.cabinsUsed.includes(cabinFilter)
@@ -1365,14 +1484,14 @@ function renderTrips() {
     refs.departureDateDays,
     trips,
     (trip) => trip.departureDateKey,
-    PREFERRED_DEPARTURE_DATE,
+    datePartsFromKey(selectedRange && selectedRange.departureStart) || { year: 2026, month: 9, day: 24 },
     APP.excludedDepartureDates
   );
   renderDateFilterRow(
     refs.returnDateDays,
     trips,
     (trip) => trip.returnDepartureDateKey,
-    PREFERRED_RETURN_DATE_BY_PERIOD[APP.returnPeriod],
+    datePartsFromKey(selectedRange && selectedRange.returnStart) || { year: 2026, month: 10, day: 4 },
     APP.excludedReturnDates
   );
 
@@ -1425,6 +1544,13 @@ function dateKeyFromText(text) {
 
 function dateKeyFromParts(parts) {
   return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function datePartsFromKey(key) {
+  if (!key) return null;
+  const [year, month, day] = key.split("-").map(Number);
+  if (![year, month, day].every(Number.isFinite)) return null;
+  return { year, month, day };
 }
 
 function msFromDateKey(key) {
@@ -1715,8 +1841,8 @@ function scatterDot(trip, xScale, yScale, rScale, mode) {
 
   const sameGateway = trip.returnOrigin === trip.destination;
   const routeLabel = sameGateway
-    ? `PER \u2194 ${cityCode(trip.destination)}`
-    : `PER \u2192 ${cityCode(trip.destination)} \u00b7\u00b7\u00b7 ${cityCode(trip.returnOrigin)} \u2192 PER`;
+    ? `${cityCode(trip.origin)} \u2194 ${cityCode(trip.destination)}`
+    : `${cityCode(trip.origin)} \u2192 ${cityCode(trip.destination)} \u00b7\u00b7\u00b7 ${cityCode(trip.returnOrigin)} \u2192 ${cityCode(trip.origin)}`;
 
   const title = document.createElementNS(SVG_NS, "title");
   title.textContent = [
@@ -1813,10 +1939,10 @@ function tripCardHtml(trip) {
 
   const sameGateway = trip.returnOrigin === trip.destination;
   const routeTitle = sameGateway
-    ? `PER <span class="arrow">&#8646;</span> ${cityCode(trip.destination)}`
-    : `PER <span class="arrow">&rarr;</span> ${cityCode(trip.destination)}` +
+    ? `${cityCode(trip.origin)} <span class="arrow">&#8646;</span> ${cityCode(trip.destination)}`
+    : `${cityCode(trip.origin)} <span class="arrow">&rarr;</span> ${cityCode(trip.destination)}` +
       `<span class="route-gap">&middot;&middot;&middot;</span>` +
-      `${cityCode(trip.returnOrigin)} <span class="arrow">&rarr;</span> PER`;
+      `${cityCode(trip.returnOrigin)} <span class="arrow">&rarr;</span> ${cityCode(trip.origin)}`;
 
   return `
     <article class="trip ${trip.isCurrentBooking ? "is-current" : ""}" data-trip-id="${trip.tripId}">

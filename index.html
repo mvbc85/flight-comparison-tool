@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Perth &rarr; Europe &middot; Route Finder</title>
+    <title>Flight Route Finder</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,8 +15,8 @@
   </head>
   <body>
     <header class="hero">
-      <p class="eyebrow">Every valid combination &middot; September &ndash; October 2026</p>
-      <h1>Perth to Madrid or Barcelona</h1>
+      <p class="eyebrow">Every valid combination &middot; one clear comparison</p>
+      <h1 id="routeTitle">Choose your route</h1>
     </header>
 
     <div id="loadError" class="load-error" hidden></div>
@@ -29,21 +29,51 @@
     <p id="signedInAs" class="signed-in-as" hidden></p>
 
     <main id="mainLayout" hidden>
-      <div class="period-toggle" id="periodToggle" role="group" aria-label="Return departure date">
-        <button type="button" class="period-toggle-btn is-active" data-period="before">Manuel's Return</button>
-        <button type="button" class="period-toggle-btn" data-period="after">Isabel's Return</button>
-      </div>
+      <section class="date-range-picker" id="dateRangePicker" aria-labelledby="dateRangeTitle">
+        <div class="date-range-heading">
+          <div>
+            <p class="route-picker-kicker">Compare windows</p>
+            <h2 id="dateRangeTitle">Choose a departure and return range</h2>
+          </div>
+          <p>Set up to three travel windows. Dates are inclusive.</p>
+        </div>
+        <div class="date-range-tabs" role="tablist" aria-label="Date range options">
+          <button type="button" class="date-range-tab is-active" data-range-id="range-1" role="tab">Range 1</button>
+          <button type="button" class="date-range-tab" data-range-id="range-2" role="tab">Range 2</button>
+          <button type="button" class="date-range-tab" data-range-id="range-3" role="tab">Range 3</button>
+        </div>
+        <div class="date-range-fields">
+          <label>
+            <span>Origin</span>
+            <select class="date-range-input date-range-route-input" data-range-id="range-1" data-range-field="origin" aria-label="Origin city for this range"></select>
+          </label>
+          <label>
+            <span>Destination</span>
+            <select class="date-range-input date-range-route-input" data-range-id="range-1" data-range-field="destination" aria-label="Destination city for this range"></select>
+          </label>
+          <label>
+            <span>Departure from</span>
+            <input class="date-range-input" type="date" data-range-id="range-1" data-range-field="departureStart" />
+          </label>
+          <label>
+            <span>Departure to</span>
+            <input class="date-range-input" type="date" data-range-id="range-1" data-range-field="departureEnd" />
+          </label>
+          <span class="date-range-arrow" aria-hidden="true">&rarr;</span>
+          <label>
+            <span>Return from</span>
+            <input class="date-range-input" type="date" data-range-id="range-1" data-range-field="returnStart" />
+          </label>
+          <label>
+            <span>Return to</span>
+            <input class="date-range-input" type="date" data-range-id="range-1" data-range-field="returnEnd" />
+          </label>
+        </div>
+        <p class="date-range-status" hidden role="alert"></p>
+      </section>
 
       <div class="toolbar">
         <div class="toolbar-filters" id="toolbarFilters">
-          <label>
-            <span>Destination</span>
-            <select id="filterDestination">
-              <option value="all">Madrid &amp; Barcelona</option>
-              <option value="Madrid">Madrid only</option>
-              <option value="Barcelona">Barcelona only</option>
-            </select>
-          </label>
           <label>
             <span>Cabin</span>
             <select id="filterCabin">
@@ -104,8 +134,8 @@
               <label>
                 <span>Direction</span>
                 <select name="ow_direction">
-                  <option value="outbound">Outbound &mdash; Perth to Europe</option>
-                  <option value="return">Return &mdash; Europe to Perth</option>
+                  <option value="outbound">Outbound</option>
+                  <option value="return">Return</option>
                 </select>
               </label>
               <label>
@@ -196,13 +226,12 @@
 
           <div id="returnFields" class="leg-fieldset" hidden>
             <p class="add-leg-hint">
-              A round trip flying Perth &rarr; Madrid/Barcelona &rarr; Perth
-              through the same city both ways is automatically marked as a
-              fixed package that can't be mixed with other options. Anything
-              else stays mixable.
+              A round trip using the same city pair in reverse is automatically
+              marked as a fixed package that can't be mixed with other options.
+              Open-jaw trips stay mixable.
             </p>
             <fieldset class="leg-fieldset-group">
-              <legend>Outbound leg &mdash; Perth to Europe</legend>
+              <legend>Outbound leg</legend>
               <div class="field-row">
                 <label>
                   <span>Origin</span>
@@ -291,7 +320,7 @@
             </fieldset>
 
             <fieldset class="leg-fieldset-group">
-              <legend>Return leg &mdash; Europe to Perth</legend>
+              <legend>Return leg</legend>
               <div class="field-row">
                 <label>
                   <span>Origin</span>
